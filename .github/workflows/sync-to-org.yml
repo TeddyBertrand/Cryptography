@@ -1,0 +1,35 @@
+name: Sync to org repo
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Merge into org repo and push
+        env:
+          ORG_PUSH_TOKEN: ${{ secrets.ORG_PUSH_TOKEN }}
+          ORG_REPO: EpitechPGE3-2026/G-CNA-500-MPL-5-1-mypgp-3
+        run: |
+          set -euo pipefail
+          git remote add org "https://x-access-token:${ORG_PUSH_TOKEN}@github.com/${ORG_REPO}.git"
+          if git fetch org main; then
+            git merge --allow-unrelated-histories --no-edit org/main || {
+              echo "::error::merge conflict syncing into org repo -- resolve manually (see CONTRIBUTING.md)"
+              exit 1
+            }
+          else
+            echo "org repo has no 'main' yet -- first sync, pushing directly"
+          fi
+          git push org HEAD:main
