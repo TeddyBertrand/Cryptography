@@ -24,12 +24,27 @@ jobs:
         run: |
           set -euo pipefail
           git remote add org "https://x-access-token:${ORG_PUSH_TOKEN}@github.com/${ORG_REPO}.git"
-          if git fetch org main; then
+          # `ls-remote --exit-code` distinguishes "repo reachable, main just
+          # doesn't exist yet" (exit 2, the real first-sync case) from any
+          # other failure (exit 128: bad auth, no SSO authorization for the
+          # org, repo actually missing, ...), which must fail loudly instead
+          # of being silently treated as "first sync" -- that misread it
+          # into a confusing double 404 (fetch AND the fallback push both
+          # failing the same way) instead of a clear auth error.
+          set +e
+          git ls-remote --exit-code org main >/dev/null 2>&1
+          ls_remote_status=$?
+          set -e
+          if [ "$ls_remote_status" -eq 0 ]; then
+            git fetch org main
             git merge --allow-unrelated-histories --no-edit org/main || {
               echo "::error::merge conflict syncing into org repo -- resolve manually (see CONTRIBUTING.md)"
               exit 1
             }
-          else
+          elif [ "$ls_remote_status" -eq 2 ]; then
             echo "org repo has no 'main' yet -- first sync, pushing directly"
+          else
+            echo "::error::could not reach org repo '${ORG_REPO}' (exit $ls_remote_status) -- this is an auth/permission problem with ORG_PUSH_TOKEN, not a missing branch. Check the token's scopes and, if the org enforces SSO, that it's authorized for this org."
+            exit 1
           fi
           git push org HEAD:main
