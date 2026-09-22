@@ -32,7 +32,7 @@ jobs:
           # into a confusing double 404 (fetch AND the fallback push both
           # failing the same way) instead of a clear auth error.
           set +e
-          git ls-remote --exit-code org main >/dev/null 2>&1
+          ls_remote_output=$(git ls-remote --exit-code org main 2>&1)
           ls_remote_status=$?
           set -e
           if [ "$ls_remote_status" -eq 0 ]; then
@@ -44,7 +44,7 @@ jobs:
           elif [ "$ls_remote_status" -eq 2 ]; then
             echo "org repo has no 'main' yet -- first sync, pushing directly"
           else
-            echo "::error::could not reach org repo '${ORG_REPO}' (exit $ls_remote_status) -- this is an auth/permission problem with ORG_PUSH_TOKEN, not a missing branch. Check the token's scopes and, if the org enforces SSO, that it's authorized for this org."
+            echo "::error::could not reach org repo '${ORG_REPO}' (exit $ls_remote_status): $ls_remote_output"
             exit 1
           fi
           git push org HEAD:main
