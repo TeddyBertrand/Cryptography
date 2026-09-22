@@ -12,6 +12,11 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.10.0
+        with:
+          ssh-private-key: ${{ secrets.ORG_DEPLOY_KEY }}
+
       - name: Configure git identity
         run: |
           git config user.name "github-actions[bot]"
@@ -19,18 +24,20 @@ jobs:
 
       - name: Merge into org repo and push
         env:
-          ORG_PUSH_TOKEN: ${{ secrets.ORG_PUSH_TOKEN }}
           ORG_REPO: EpitechPGE3-2026/G-CNA-500-MPL-5-1-mypgp-3
         run: |
           set -euo pipefail
-          git remote add org "https://x-access-token:${ORG_PUSH_TOKEN}@github.com/${ORG_REPO}.git"
+          mkdir -p ~/.ssh
+          ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null
+          git remote add org "git@github.com:${ORG_REPO}.git"
           # `ls-remote --exit-code` distinguishes "repo reachable, main just
           # doesn't exist yet" (exit 2, the real first-sync case) from any
-          # other failure (exit 128: bad auth, no SSO authorization for the
-          # org, repo actually missing, ...), which must fail loudly instead
-          # of being silently treated as "first sync" -- that misread it
-          # into a confusing double 404 (fetch AND the fallback push both
-          # failing the same way) instead of a clear auth error.
+          # other failure (exit 128: bad auth, deploy key not added yet to
+          # the org repo, repo actually missing, ...), which must fail
+          # loudly instead of being silently treated as "first sync" -- that
+          # misread it into a confusing double failure (fetch AND the
+          # fallback push both failing the same way) instead of a clear
+          # auth error.
           set +e
           ls_remote_output=$(git ls-remote --exit-code org main 2>&1)
           ls_remote_status=$?
