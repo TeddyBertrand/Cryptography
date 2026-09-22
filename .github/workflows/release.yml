@@ -33,7 +33,7 @@ jobs:
           tar -czf G-CNA-500-MPL-5-1-mypgp-3-${{ github.ref_name }}-${{ matrix.target }}.tar.gz \
             -C target/${{ matrix.target }}/release G-CNA-500-MPL-5-1-mypgp-3
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: G-CNA-500-MPL-5-1-mypgp-3-${{ matrix.target }}
           path: G-CNA-500-MPL-5-1-mypgp-3-${{ github.ref_name }}-${{ matrix.target }}.tar.gz
