@@ -1,10 +1,20 @@
 # Contributing
 
-This repo mirrors an upstream project you don't control directly (an external/academic
-repo). Content arrives here via an automated sync from a separate mirror repo -- see
-that mirror repo's `.github/workflows/sync-to-org.yml` for how it gets pushed to `main`.
-The scaffolding below (labels, project board, templates) lives only in this org repo,
-not upstream.
+## Setup
+
+If this project has a `flake.nix` (you opted into Nix when bootstrapping):
+
+```
+nix develop
+pre-commit install --hook-type commit-msg --hook-type pre-commit
+```
+
+Otherwise, install `rustc`/`cargo`/`rustfmt`/`clippy` (e.g. via `rustup`) and `pre-commit`
+yourself, then:
+
+```
+pre-commit install --hook-type commit-msg --hook-type pre-commit
+```
 
 ## Issues
 
@@ -17,12 +27,19 @@ not upstream.
   for a `Priority` single-select field and set it there. Only fall back to a `priority:*` label
   if no project exists.
 
+## License
+
+Chosen at bootstrap time (or fetched fresh via `gh api licenses/:key` and dropped into
+`LICENSE`, or `LICENSE-MIT`/`LICENSE-APACHE` for the MIT OR Apache-2.0 dual-license default).
+To change it later, either edit the file directly or re-fetch a different one the same way.
+
 ## Branches & commits
 
 - Branch naming: `type/slug` (`feat`, `fix`, `refacto`, `docs`, `chore`, `test`, `setup`).
 - Commit format: `type(scope): description`.
-- **No `Co-authored-by` trailers, ever** — enforced by the `reject-co-author` CI check on
-  every PR. If a commit already has one, rewrite history before opening the PR.
+- **No `Co-authored-by` trailers, ever** — enforced locally by the `reject-co-authored-by`
+  pre-commit hook (bypassable with `--no-verify`) and by the `reject-co-author` CI check on
+  every PR (not bypassable). If a commit already has one, rewrite history before opening the PR.
 
 ## Pull requests
 
