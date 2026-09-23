@@ -11,6 +11,7 @@ pub const KEY: &str = "key";
 pub fn parser() -> Parser {
     Parser::new("./my_pgp")
         .usage("CRYPTO_SYSTEM MODE [OPTIONS] [key]")
+        .help_on_empty(true)
         .about(
             "Cipher or decipher MESSAGE using a given CRYPTO_SYSTEM. \
              The MESSAGE is read from the standard input.",

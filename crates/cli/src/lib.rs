@@ -95,6 +95,11 @@ Cipher or decipher MESSAGE using a given CRYPTO_SYSTEM. The MESSAGE is read from
     }
 
     #[test]
+    fn no_arguments_is_error_with_usage() {
+        assert_eq!(run(&[]), Err(Error::new(SUBJECT_USAGE)));
+    }
+
+    #[test]
     fn xor_block_cipher() {
         let cmd = command(&["xor", "-c", "-b", "5768"]);
         assert_eq!(cmd.system, CryptoSystem::Xor);
@@ -145,7 +150,6 @@ Cipher or decipher MESSAGE using a given CRYPTO_SYSTEM. The MESSAGE is read from
     #[test]
     fn invalid_forms_are_errors() {
         let invalid: &[&[&str]] = &[
-            &[],
             &["foo", "-c", "k"],
             &["xor", "k"],
             &["xor", "-c", "-d", "k"],
