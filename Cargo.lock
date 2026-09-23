@@ -55,6 +55,7 @@ name = "my_pgp"
 version = "0.1.0"
 dependencies = [
  "aes",
+ "cli",
  "core",
  "encoding",
  "padding",
