@@ -1,0 +1,11 @@
+[package]
+name = "x25519"
+version.workspace = true
+edition.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+encoding = { path = "../encoding" }
+random = { path = "../random" }

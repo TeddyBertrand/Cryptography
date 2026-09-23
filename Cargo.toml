@@ -1,14 +1,29 @@
-[package]
-name = "G-CNA-500-MPL-5-1-mypgp-3"
+[workspace]
+resolver = "2"
+members = [
+    "crates/core",
+    "crates/encoding",
+    "crates/bigint",
+    "crates/random",
+    "crates/prime",
+    "crates/xor",
+    "crates/aes",
+    "crates/rsa",
+    "crates/pgp",
+    "crates/x25519",
+    "crates/hash",
+    "crates/sign",
+    "crates/padding",
+    "crates/my_pgp",
+    "bench",
+]
+
+[workspace.package]
 version = "0.1.0"
 edition = "2021"
 
-[lints.rust]
+[workspace.lints.rust]
 warnings = "deny"
 
-[lints.clippy]
+[workspace.lints.clippy]
 all = "deny"
-
-[[bin]]
-name = "my_pgp"
-path = "src/main.rs"

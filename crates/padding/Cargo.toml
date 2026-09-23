@@ -1,0 +1,11 @@
+[package]
+name = "padding"
+version.workspace = true
+edition.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+hash = { path = "../hash" }
+random = { path = "../random" }

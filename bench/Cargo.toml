@@ -1,0 +1,16 @@
+[package]
+name = "bench"
+version.workspace = true
+edition.workspace = true
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "bench"
+path = "src/main.rs"
+
+[dependencies]
+bigint = { path = "../crates/bigint" }
+rsa = { path = "../crates/rsa" }
+aes = { path = "../crates/aes" }

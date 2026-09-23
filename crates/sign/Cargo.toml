@@ -1,0 +1,11 @@
+[package]
+name = "sign"
+version.workspace = true
+edition.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+rsa = { path = "../rsa" }
+hash = { path = "../hash" }
