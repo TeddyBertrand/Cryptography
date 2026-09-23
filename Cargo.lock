@@ -28,6 +28,14 @@ name = "bigint"
 version = "0.1.0"
 
 [[package]]
+name = "cli"
+version = "0.1.0"
+dependencies = [
+ "argparse",
+ "core",
+]
+
+[[package]]
 name = "core"
 version = "0.1.0"
 

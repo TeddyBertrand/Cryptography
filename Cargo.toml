@@ -3,6 +3,7 @@ resolver = "2"
 members = [
     "crates/core",
     "crates/argparse",
+    "crates/cli",
     "crates/encoding",
     "crates/bigint",
     "crates/random",
