@@ -1,0 +1,35 @@
+services:
+  jenkins:
+    image: jenkins/jenkins:2.568.3-lts-jdk21
+    container_name: jenkins-controller
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+
+  rust-agent:
+    build:
+      context: .
+      dockerfile: agent.Dockerfile
+    container_name: jenkins-rust-agent
+    restart: unless-stopped
+    depends_on:
+      - jenkins
+    environment:
+      - JENKINS_URL=${JENKINS_URL:-http://jenkins:8080}
+      - JENKINS_AGENT_NAME=${JENKINS_AGENT_NAME:-rust-agent}
+      - JENKINS_SECRET=${JENKINS_AGENT_SECRET}
+    entrypoint:
+      - sh
+      - -c
+      - >
+        java -jar /usr/share/jenkins/agent.jar
+        -url "$JENKINS_URL"
+        -name "$JENKINS_AGENT_NAME"
+        -secret "$JENKINS_SECRET"
+        -workDir "/home/jenkins/agent"
+
+volumes:
+  jenkins_home:
