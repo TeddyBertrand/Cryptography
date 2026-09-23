@@ -1,0 +1,9 @@
+== ARGS ==
+xor
+-c
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+missing key
+== EXIT ==
+84
