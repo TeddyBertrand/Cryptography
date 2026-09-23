@@ -181,7 +181,7 @@ jobs:
           GH_TOKEN: ${{ secrets.PROJECT_TOKEN }}
           PROJECT_ID: PVT_kwHOCu3BUc4BkSdY
           STATUS_FIELD_ID: PVTSSF_lAHOCu3BUc4BkSdYzhjDjmU
-          ON_DEV_OPTION_ID: 07647454
+          ON_DEV_OPTION_ID: "07647454"
           ON_MAIN_OPTION_ID: daebd6d7
           BASE_REF: ${{ github.event.pull_request.base.ref }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
