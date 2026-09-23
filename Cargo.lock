@@ -11,6 +11,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "argparse"
+version = "0.1.0"
+
+[[package]]
 name = "bench"
 version = "0.1.0"
 dependencies = [
@@ -22,6 +26,14 @@ dependencies = [
 [[package]]
 name = "bigint"
 version = "0.1.0"
+
+[[package]]
+name = "cli"
+version = "0.1.0"
+dependencies = [
+ "argparse",
+ "core",
+]
 
 [[package]]
 name = "core"
@@ -43,6 +55,7 @@ name = "my_pgp"
 version = "0.1.0"
 dependencies = [
  "aes",
+ "cli",
  "core",
  "encoding",
  "padding",

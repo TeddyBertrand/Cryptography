@@ -57,8 +57,10 @@ Leaves (no internal deps):
 - `crates/encoding` — little-endian hex <-> bytes conversion. #22
 - `crates/bigint` — arbitrary-precision `BigUint`: storage/parsing/cmp, add/sub/mul, div, modpow/gcd/lcm/inv. #10, #32-35, #50
 - `crates/random` — CSPRNG seeded from `/dev/urandom` (bonus). #47
+- `crates/argparse` — generic, project-agnostic clap-lite: `Arg`/`Group` builders, `Parser` -> `Matches`, help generated from arg metadata + `Layout`. Reusable outside my_pgp; never put my_pgp knowledge here. #20
 
 Depend on the above:
+- `crates/cli` (-> argparse, core) — my_pgp argument spec (one `Arg` per flag, description = subject text) + project rules (`-g` rsa-only, key required unless `-g`) -> `Command`. New flag = new `Arg` in `spec.rs`. #20
 - `crates/prime` (-> bigint, random) — Miller-Rabin + random prime generation (bonus). #48
 - `crates/xor` (-> core, encoding) — XOR block/stream cipher. #9, #25, #26
 - `crates/aes` (-> core, encoding) — AES-128/192/256 key expansion + block/stream cipher. #9, #27-30, #46
@@ -72,7 +74,7 @@ Depend on those:
 - `crates/padding` (-> hash, random) — RSA-OAEP (bonus). #58
 
 Binary:
-- `crates/my_pgp` (-> core, encoding, xor, aes, rsa, pgp, x25519, sign, padding) — CLI arg parsing, `-h` usage, stdin/stdout, dispatch, error -> exit 84. #8, #20, #21, #23
+- `crates/my_pgp` (-> core, cli, encoding, xor, aes, rsa, pgp, x25519, sign, padding) — calls `cli::parse`, stdin/stdout, dispatch, error -> exit 84. #8, #21, #23
 
 Standalone:
 - `bench/` (-> bigint, rsa, aes) — std-only benchmark binary (bonus). #51
