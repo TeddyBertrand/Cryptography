@@ -12,6 +12,7 @@ pub struct Parser {
     pub(crate) layout: Layout,
     pub(crate) args: Vec<Arg>,
     groups: Vec<Group>,
+    help_on_empty: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -54,7 +55,14 @@ impl Parser {
             layout: Layout::default(),
             args: Vec::new(),
             groups: Vec::new(),
+            help_on_empty: false,
         }
+    }
+
+    /// No arguments at all fails with `Error::NoArguments` carrying the rendered help.
+    pub fn help_on_empty(mut self, value: bool) -> Self {
+        self.help_on_empty = value;
+        self
     }
 
     pub fn usage(mut self, usage: &'static str) -> Self {
@@ -87,6 +95,9 @@ impl Parser {
         I: IntoIterator<Item = String>,
     {
         let tokens: Vec<String> = args.into_iter().collect();
+        if tokens.is_empty() && self.help_on_empty {
+            return Err(Error::NoArguments(self.render_help()));
+        }
         if tokens.iter().any(|t| t == "-h" || t == "--help") {
             return Ok(Parsed::Help);
         }
@@ -226,6 +237,16 @@ mod tests {
             Ok(Parsed::Matches(m)) => m,
             other => panic!("expected matches, got {other:?}"),
         }
+    }
+
+    #[test]
+    fn empty_args_render_help_when_enabled() {
+        let p = parser().help_on_empty(true);
+        assert_eq!(
+            p.parse(Vec::new()),
+            Err(Error::NoArguments(p.render_help()))
+        );
+        assert_eq!(run(&[]), Err(Error::MissingRequired("TARGET".into())));
     }
 
     #[test]

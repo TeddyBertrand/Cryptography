@@ -2,6 +2,7 @@ use std::fmt;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Error {
+    NoArguments(String),
     UnknownFlag(String),
     MissingValue {
         flag: String,
@@ -29,6 +30,7 @@ pub enum Error {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::NoArguments(help) => write!(f, "{help}"),
             Self::UnknownFlag(flag) => write!(f, "unknown flag '{flag}'"),
             Self::MissingValue { flag, value } => write!(f, "missing value {value} for '{flag}'"),
             Self::Duplicate(flag) => write!(f, "'{flag}' given more than once"),
