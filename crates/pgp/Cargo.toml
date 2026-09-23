@@ -1,0 +1,12 @@
+[package]
+name = "pgp"
+version.workspace = true
+edition.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+rsa = { path = "../rsa" }
+xor = { path = "../xor" }
+aes = { path = "../aes" }

@@ -3,5 +3,113 @@
 version = 4
 
 [[package]]
-name = "G-CNA-500-MPL-5-1-mypgp-3"
+name = "aes"
 version = "0.1.0"
+dependencies = [
+ "core",
+ "encoding",
+]
+
+[[package]]
+name = "bench"
+version = "0.1.0"
+dependencies = [
+ "aes",
+ "bigint",
+ "rsa",
+]
+
+[[package]]
+name = "bigint"
+version = "0.1.0"
+
+[[package]]
+name = "core"
+version = "0.1.0"
+
+[[package]]
+name = "encoding"
+version = "0.1.0"
+
+[[package]]
+name = "hash"
+version = "0.1.0"
+dependencies = [
+ "encoding",
+]
+
+[[package]]
+name = "my_pgp"
+version = "0.1.0"
+dependencies = [
+ "aes",
+ "core",
+ "encoding",
+ "padding",
+ "pgp",
+ "rsa",
+ "sign",
+ "x25519",
+ "xor",
+]
+
+[[package]]
+name = "padding"
+version = "0.1.0"
+dependencies = [
+ "hash",
+ "random",
+]
+
+[[package]]
+name = "pgp"
+version = "0.1.0"
+dependencies = [
+ "aes",
+ "rsa",
+ "xor",
+]
+
+[[package]]
+name = "prime"
+version = "0.1.0"
+dependencies = [
+ "bigint",
+ "random",
+]
+
+[[package]]
+name = "random"
+version = "0.1.0"
+
+[[package]]
+name = "rsa"
+version = "0.1.0"
+dependencies = [
+ "bigint",
+ "encoding",
+]
+
+[[package]]
+name = "sign"
+version = "0.1.0"
+dependencies = [
+ "hash",
+ "rsa",
+]
+
+[[package]]
+name = "x25519"
+version = "0.1.0"
+dependencies = [
+ "encoding",
+ "random",
+]
+
+[[package]]
+name = "xor"
+version = "0.1.0"
+dependencies = [
+ "core",
+ "encoding",
+]

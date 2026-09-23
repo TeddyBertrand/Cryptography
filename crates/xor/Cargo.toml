@@ -1,0 +1,11 @@
+[package]
+name = "xor"
+version.workspace = true
+edition.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+core = { path = "../core" }
+encoding = { path = "../encoding" }

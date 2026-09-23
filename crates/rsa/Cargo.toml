@@ -1,0 +1,11 @@
+[package]
+name = "rsa"
+version.workspace = true
+edition.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+bigint = { path = "../bigint" }
+encoding = { path = "../encoding" }

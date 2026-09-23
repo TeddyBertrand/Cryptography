@@ -1,0 +1,22 @@
+[package]
+name = "my_pgp"
+version.workspace = true
+edition.workspace = true
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "my_pgp"
+path = "src/main.rs"
+
+[dependencies]
+core = { path = "../core" }
+encoding = { path = "../encoding" }
+xor = { path = "../xor" }
+aes = { path = "../aes" }
+rsa = { path = "../rsa" }
+pgp = { path = "../pgp" }
+x25519 = { path = "../x25519" }
+sign = { path = "../sign" }
+padding = { path = "../padding" }
