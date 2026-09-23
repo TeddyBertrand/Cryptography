@@ -1,4 +1,3 @@
-
 use core::{Bytes, Cipher, Error, Result};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
