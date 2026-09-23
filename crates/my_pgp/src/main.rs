@@ -85,7 +85,7 @@ fn run() -> Result<()> {
 
 fn main() {
     if let Err(err) = run() {
-        eprintln!("{err}");
+        eprintln!("This is error: {err} :D");
         process::exit(core::EXIT_CODE);
     }
 }
