@@ -1,0 +1,10 @@
+== ARGS ==
+foo
+-c
+k
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+invalid CRYPTO_SYSTEM 'foo'
+== EXIT ==
+84
