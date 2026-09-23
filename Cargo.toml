@@ -10,5 +10,5 @@ warnings = "deny"
 all = "deny"
 
 [[bin]]
-name = "G-CNA-500-MPL-5-1-mypgp-3"
+name = "my_pgp"
 path = "src/main.rs"
