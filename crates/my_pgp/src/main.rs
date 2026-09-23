@@ -8,24 +8,6 @@ use core::{Bytes, Cipher, Error, Result};
 use encoding::hex;
 use xor::Xor;
 
-fn run() -> Result<()> {
-    match cli::parse(std::env::args().skip(1))? {
-        Outcome::Usage(usage) => {
-            println!("{usage}");
-            Ok(())
-        }
-        Outcome::Run(command) => run_command(command),
-    }
-}
-
-fn run_command(command: Command) -> Result<()> {
-    match command.system {
-        CryptoSystem::Xor => run_xor(command),
-        CryptoSystem::Aes | CryptoSystem::Rsa | CryptoSystem::PgpXor | CryptoSystem::PgpAes => {
-            Err(Error::new("crypto system is not implemented"))
-        }
-    }
-}
 
 fn run_xor(command: Command) -> Result<()> {
     let key = command.key.ok_or_else(|| Error::new("missing key"))?;
@@ -81,6 +63,25 @@ fn read_message(strip_trailing_lf: bool) -> Result<Vec<u8>> {
     }
 
     Ok(message)
+}
+
+fn run_command(command: Command) -> Result<()> {
+    match command.system {
+        CryptoSystem::Xor => run_xor(command),
+        CryptoSystem::Aes | CryptoSystem::Rsa | CryptoSystem::PgpXor | CryptoSystem::PgpAes => {
+            Err(Error::new("crypto system is not implemented"))
+        }
+    }
+}
+
+fn run() -> Result<()> {
+    match cli::parse(std::env::args().skip(1))? {
+        Outcome::Usage(usage) => {
+            println!("{usage}");
+            Ok(())
+        }
+        Outcome::Run(command) => run_command(command),
+    }
 }
 
 fn main() {
