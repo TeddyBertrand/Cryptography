@@ -12,7 +12,7 @@ if [ -f .env ]; then
     . ./.env
 fi
 
-JENKINS_URL="${JENKINS_URL:-http://localhost:8080}"
+JENKINS_URL="${JENKINS_EXTERNAL_URL:-http://localhost:8080}"
 JENKINS_ADMIN_ID="${JENKINS_ADMIN_ID:-admin}"
 JENKINS_AGENT_NAME="${JENKINS_AGENT_NAME:-rust-agent}"
 
@@ -25,7 +25,7 @@ secret=$(curl -sf -u "${JENKINS_ADMIN_ID}:${JENKINS_ADMIN_PASSWORD}" \
     "${JENKINS_URL}/computer/${JENKINS_AGENT_NAME}/jenkins-agent.jnlp" \
     | grep -oE '<application-desc[^>]*>.*</application-desc>' \
     | grep -oE '<argument>[^<]*</argument>' \
-    | sed -n '2p' \
+    | sed -n '1p' \
     | sed -E 's#</?argument>##g')
 
 if [ -z "$secret" ]; then
