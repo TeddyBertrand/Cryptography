@@ -11,7 +11,11 @@ authoritative CI on PRs; this is an optional self-hosted mirror.
 
 ## Prerequisites
 
-Docker with the Compose plugin (`docker compose version`).
+- Docker with the Compose plugin (`docker compose version`).
+- `python3` with PyYAML, for `tests/basic/validate-casc.sh` and the
+  JSON parsing used by the other test scripts (`python3 -c "import yaml"`
+  should succeed; install via your distro/venv if not — e.g. on Nix:
+  `nix-shell -p python3Packages.pyyaml`).
 
 ## First-time setup
 
