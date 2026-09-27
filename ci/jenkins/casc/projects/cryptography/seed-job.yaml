@@ -1,9 +1,27 @@
 # Public repo — anonymous HTTPS clone, no credential needed. If that
 # changes, add a credentials.yaml alongside this file (see core/credentials.yaml
 # for the shared domain wrapper) and reference its id in `credentials()` below.
+#
+# Two jobs, one per long-lived branch: `cryptography-dev` mirrors the
+# integration branch PRs land on, `cryptography-main` mirrors the release
+# branch. Same Jenkinsfile, different branch/job name.
 jobs:
   - script: >
-      pipelineJob('cryptography') {
+      pipelineJob('cryptography-dev') {
+        definition {
+          cpsScm {
+            scm {
+              git {
+                remote { url('https://github.com/TeddyBertrand/Cryptography.git') }
+                branches('*/dev')
+              }
+            }
+            scriptPath('ci/jenkins/jenkinsfiles/cryptography.Jenkinsfile')
+          }
+        }
+      }
+  - script: >
+      pipelineJob('cryptography-main') {
         definition {
           cpsScm {
             scm {

@@ -2,7 +2,8 @@
 
 Self-hosted Jenkins controller + a Rust-capable inbound agent, fully defined
 as code (JCasC — Jenkins Configuration as Code) so there is no click-ops:
-security, plugins, the agent node and the `cryptography` pipeline job are all
+security, plugins, the agent node and the `cryptography-dev`/`cryptography-main`
+pipeline jobs are all
 baked into the controller image and re-applied on every boot. This mirrors
 the same checks as `.github/workflows/ci.yml`: `cargo fmt --all -- --check`,
 `cargo build --workspace`, `cargo test --workspace`,
@@ -62,9 +63,9 @@ Two tiers, under `ci/jenkins/tests/`:
 - **Basic** (`tests/basic/`): the JCasC yaml is well-formed, the controller
   boots healthy with no CasC load errors, and the configured security realm
   and plugin set are actually live.
-- **Project** (`tests/project/`): the `cryptography` seed job exists and is
-  buildable, and its Jenkinsfile passes Jenkins' built-in Declarative
-  Pipeline validator.
+- **Project** (`tests/project/`): the `cryptography-dev` and
+  `cryptography-main` seed jobs exist and are buildable, and the Jenkinsfile
+  they share passes Jenkins' built-in Declarative Pipeline validator.
 
 Run everything hermetically (brings the stack up, tests it, tears it down):
 ```
