@@ -26,6 +26,9 @@ dependencies = [
 [[package]]
 name = "bigint"
 version = "0.1.0"
+dependencies = [
+ "encoding",
+]
 
 [[package]]
 name = "cli"
