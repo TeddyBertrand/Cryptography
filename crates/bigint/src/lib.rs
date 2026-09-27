@@ -311,6 +311,90 @@ impl BigUint {
         let remainder = Self::from_limbs(u[..n].to_vec()).shr(shift);
         (Self::from_limbs(quotient), remainder)
     }
+
+    /// Computes `self^exponent mod modulus` via square-and-multiply.
+    pub fn modpow(&self, exponent: &Self, modulus: &Self) -> Result<Self, String> {
+        if modulus.is_zero() {
+            return Err("modulus must not be zero".to_string());
+        }
+        if *modulus == Self::from_u64(1) {
+            return Ok(Self::zero());
+        }
+
+        let mut result = Self::from_u64(1);
+        let mut base = self.checked_divmod(modulus)?.1;
+        let mut exponent = exponent.clone();
+
+        while !exponent.is_zero() {
+            if exponent.limbs[0] & 1 == 1 {
+                result = (&result * &base).checked_divmod(modulus)?.1;
+            }
+            base = (&base * &base).checked_divmod(modulus)?.1;
+            exponent = exponent.shr(1);
+        }
+
+        Ok(result)
+    }
+
+    /// Greatest common divisor via the Euclidean algorithm.
+    pub fn gcd(&self, other: &Self) -> Self {
+        let mut a = self.clone();
+        let mut b = other.clone();
+
+        while !b.is_zero() {
+            let remainder = a.checked_divmod(&b).expect("divisor checked non-zero").1;
+            a = b;
+            b = remainder;
+        }
+
+        a
+    }
+
+    /// Least common multiple: `self / gcd(self, other) * other`.
+    pub fn lcm(&self, other: &Self) -> Result<Self, String> {
+        if self.is_zero() || other.is_zero() {
+            return Ok(Self::zero());
+        }
+
+        let gcd = self.gcd(other);
+        let (quotient, _) = self.checked_divmod(&gcd)?;
+        Ok(&quotient * other)
+    }
+
+    /// Modular inverse via the extended Euclidean algorithm, keeping every
+    /// intermediate value non-negative and reduced mod `modulus` (no signed
+    /// BigInt type needed). Errors when `self` and `modulus` are not coprime.
+    pub fn modinv(&self, modulus: &Self) -> Result<Self, String> {
+        if modulus.is_zero() || *modulus == Self::from_u64(1) {
+            return Err("modulus must be greater than 1".to_string());
+        }
+
+        let mut t = Self::zero();
+        let mut new_t = Self::from_u64(1);
+        let mut r = modulus.clone();
+        let mut new_r = self.checked_divmod(modulus)?.1;
+
+        while !new_r.is_zero() {
+            let (quotient, remainder) = r.checked_divmod(&new_r)?;
+            r = new_r;
+            new_r = remainder;
+
+            let q_new_t = (&quotient * &new_t).checked_divmod(modulus)?.1;
+            let next_t = if t >= q_new_t {
+                &t - &q_new_t
+            } else {
+                &(&t + modulus) - &q_new_t
+            };
+            t = new_t;
+            new_t = next_t;
+        }
+
+        if r != Self::from_u64(1) {
+            return Err("value has no modular inverse".to_string());
+        }
+
+        Ok(t)
+    }
 }
 
 impl Add<&BigUint> for &BigUint {
@@ -565,5 +649,81 @@ mod tests {
             assert_eq!(&(&q * &b) + &r, a);
             assert!(r < b);
         }
+    }
+
+    #[test]
+    fn modpow_agrees_with_naive_reference() {
+        fn naive_modpow(base: u64, exponent: u64, modulus: u64) -> u64 {
+            let mut result = 1u64;
+            for _ in 0..exponent {
+                result = (result * base) % modulus;
+            }
+            result
+        }
+
+        let cases = [
+            (4u64, 13u64, 497u64),
+            (2, 10, 1000),
+            (7, 0, 13),
+            (0, 5, 13),
+            (5, 1, 13),
+        ];
+
+        for (base, exponent, modulus) in cases {
+            let expected = naive_modpow(base, exponent, modulus);
+            let actual = BigUint::from_u64(base)
+                .modpow(&BigUint::from_u64(exponent), &BigUint::from_u64(modulus))
+                .unwrap();
+            assert_eq!(actual, BigUint::from_u64(expected));
+        }
+    }
+
+    #[test]
+    fn modpow_rejects_zero_modulus() {
+        assert!(BigUint::from_u64(2)
+            .modpow(&BigUint::from_u64(3), &BigUint::zero())
+            .is_err());
+    }
+
+    #[test]
+    fn gcd_and_lcm_basic_cases() {
+        let a = BigUint::from_u64(48);
+        let b = BigUint::from_u64(18);
+
+        assert_eq!(a.gcd(&b), BigUint::from_u64(6));
+        assert_eq!(a.lcm(&b).unwrap(), BigUint::from_u64(144));
+
+        assert_eq!(BigUint::zero().gcd(&a), a);
+        assert_eq!(a.gcd(&BigUint::zero()), a);
+        assert_eq!(BigUint::zero().lcm(&a).unwrap(), BigUint::zero());
+    }
+
+    #[test]
+    fn modinv_non_invertible_input_errors() {
+        // gcd(4, 8) = 4, not coprime.
+        assert!(BigUint::from_u64(4).modinv(&BigUint::from_u64(8)).is_err());
+    }
+
+    #[test]
+    fn modinv_matches_subject_worked_example() {
+        // From the my_pgp subject's small-key RSA example: p=0xd3, q=0xe3,
+        // e=257 (0x0101 little-endian), d=23453 (0x9d5b little-endian).
+        let p_minus_one = BigUint::from_u64(0xd3 - 1);
+        let q_minus_one = BigUint::from_u64(0xe3 - 1);
+        let lambda = p_minus_one.lcm(&q_minus_one).unwrap();
+        assert_eq!(lambda, BigUint::from_u64(23730));
+
+        let e = BigUint::from_hex("0101").unwrap();
+        assert_eq!(e, BigUint::from_u64(257));
+
+        let d = e.modinv(&lambda).unwrap();
+        assert_eq!(d, BigUint::from_hex("9d5b").unwrap());
+        assert_eq!(d, BigUint::from_u64(23453));
+
+        // e*d == 1 mod lambda, the actual invertibility check.
+        assert_eq!(
+            (&e * &d).checked_divmod(&lambda).unwrap().1,
+            BigUint::from_u64(1)
+        );
     }
 }
