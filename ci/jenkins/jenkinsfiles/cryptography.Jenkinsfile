@@ -6,6 +6,16 @@ pipeline {
     }
 
     stages {
+        stage('Notify pending') {
+            steps {
+                githubNotify(
+                    credentialsId: 'github-status-token',
+                    context: 'continuous-integration/jenkins',
+                    status: 'PENDING',
+                    description: 'Build started'
+                )
+            }
+        }
         stage('Format') {
             steps {
                 sh 'cargo fmt --all -- --check'
@@ -42,6 +52,22 @@ pipeline {
     }
 
     post {
+        success {
+            githubNotify(
+                credentialsId: 'github-status-token',
+                context: 'continuous-integration/jenkins',
+                status: 'SUCCESS',
+                description: 'Build succeeded'
+            )
+        }
+        failure {
+            githubNotify(
+                credentialsId: 'github-status-token',
+                context: 'continuous-integration/jenkins',
+                status: 'FAILURE',
+                description: 'Build failed'
+            )
+        }
         always {
             cleanWs()
         }
