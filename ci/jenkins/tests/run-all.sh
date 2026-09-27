@@ -16,5 +16,6 @@ sh tests/basic/plugins-installed.sh
 
 sh tests/project/seed-job-exists.sh
 sh tests/project/jenkinsfile-lint.sh
+sh tests/project/webhook-config.sh
 
 echo "All JCasC tests passed."
