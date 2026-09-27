@@ -47,5 +47,23 @@ services:
         -secret "$$JENKINS_SECRET"
         -workDir "/home/jenkins/agent"
 
+  smee-client:
+    image: node:lts-alpine
+    container_name: jenkins-smee-client
+    restart: unless-stopped
+    depends_on:
+      jenkins:
+        condition: service_healthy
+    environment:
+      - WEBHOOK_PROXY_URL=${WEBHOOK_PROXY_URL}
+    command:
+      - sh
+      - -c
+      # $$ escapes compose's own interpolation (see rust-agent entrypoint).
+      - >
+        npx --yes smee-client
+        --url "$$WEBHOOK_PROXY_URL"
+        --target http://jenkins:8080/github-webhook/
+
 volumes:
   jenkins_home:
