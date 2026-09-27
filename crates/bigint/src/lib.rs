@@ -1,5 +1,5 @@
 use std::cmp::Ordering;
-use std::ops::{Add, Mul, Sub};
+use std::ops::{Add, Div, Mul, Rem, Sub};
 
 /// Arbitrary-precision unsigned integer.
 ///
@@ -209,6 +209,108 @@ impl BigUint {
 
         Self::from_limbs(limbs)
     }
+
+    /// Divides `self` by `divisor`, returning `(quotient, remainder)`.
+    ///
+    /// Uses a single-limb fast path when possible, otherwise Knuth's
+    /// Algorithm D (TAOCP 4.3.1) with normalisation. Errors on division
+    /// by zero.
+    pub fn checked_divmod(&self, divisor: &Self) -> Result<(Self, Self), String> {
+        if divisor.is_zero() {
+            return Err("division by zero".to_string());
+        }
+        if self < divisor {
+            return Ok((Self::zero(), self.clone()));
+        }
+
+        if divisor.limbs.len() == 1 {
+            return Ok(self.divmod_single_limb(divisor.limbs[0]));
+        }
+
+        Ok(self.divmod_knuth(divisor))
+    }
+
+    fn divmod_single_limb(&self, divisor: u64) -> (Self, Self) {
+        let divisor = divisor as u128;
+        let mut quotient = vec![0u64; self.limbs.len()];
+        let mut remainder: u128 = 0;
+
+        for index in (0..self.limbs.len()).rev() {
+            let current = (remainder << 64) | self.limbs[index] as u128;
+            quotient[index] = (current / divisor) as u64;
+            remainder = current % divisor;
+        }
+
+        (Self::from_limbs(quotient), Self::from_u64(remainder as u64))
+    }
+
+    fn divmod_knuth(&self, divisor: &Self) -> (Self, Self) {
+        const BASE: u128 = 1u128 << 64;
+
+        let n = divisor.limbs.len();
+        let m = self.limbs.len() - n;
+        let shift = divisor.limbs[n - 1].leading_zeros() as usize;
+
+        let mut v = divisor.shl(shift).limbs;
+        v.resize(n, 0);
+
+        let mut u = self.shl(shift).limbs;
+        u.resize(m + n + 1, 0);
+
+        let mut quotient = vec![0u64; m + 1];
+
+        for j in (0..=m).rev() {
+            let top = ((u[j + n] as u128) << 64) | u[j + n - 1] as u128;
+            let mut qhat = top / v[n - 1] as u128;
+            let mut rhat = top % v[n - 1] as u128;
+
+            while qhat >= BASE || qhat * v[n - 2] as u128 > (rhat << 64) + u[j + n - 2] as u128 {
+                qhat -= 1;
+                rhat += v[n - 1] as u128;
+                if rhat >= BASE {
+                    break;
+                }
+            }
+
+            let mut borrow: i128 = 0;
+            let mut carry: u128 = 0;
+            for i in 0..n {
+                let product = qhat * v[i] as u128 + carry;
+                carry = product >> 64;
+                let diff = u[j + i] as i128 - (product as u64) as i128 - borrow;
+                if diff < 0 {
+                    u[j + i] = (diff + BASE as i128) as u64;
+                    borrow = 1;
+                } else {
+                    u[j + i] = diff as u64;
+                    borrow = 0;
+                }
+            }
+            let top_diff = u[j + n] as i128 - carry as i128 - borrow;
+            let overflowed = top_diff < 0;
+            u[j + n] = if overflowed {
+                (top_diff + BASE as i128) as u64
+            } else {
+                top_diff as u64
+            };
+
+            if overflowed {
+                qhat -= 1;
+                let mut carry_back: u128 = 0;
+                for i in 0..n {
+                    let sum = u[j + i] as u128 + v[i] as u128 + carry_back;
+                    u[j + i] = sum as u64;
+                    carry_back = sum >> 64;
+                }
+                u[j + n] = u[j + n].wrapping_add(carry_back as u64);
+            }
+
+            quotient[j] = qhat as u64;
+        }
+
+        let remainder = Self::from_limbs(u[..n].to_vec()).shr(shift);
+        (Self::from_limbs(quotient), remainder)
+    }
 }
 
 impl Add<&BigUint> for &BigUint {
@@ -233,6 +335,26 @@ impl Mul<&BigUint> for &BigUint {
 
     fn mul(self, other: &BigUint) -> BigUint {
         self.checked_mul(other)
+    }
+}
+
+impl Div<&BigUint> for &BigUint {
+    type Output = BigUint;
+
+    fn div(self, other: &BigUint) -> BigUint {
+        self.checked_divmod(other)
+            .expect("BigUint division by zero")
+            .0
+    }
+}
+
+impl Rem<&BigUint> for &BigUint {
+    type Output = BigUint;
+
+    fn rem(self, other: &BigUint) -> BigUint {
+        self.checked_divmod(other)
+            .expect("BigUint division by zero")
+            .1
     }
 }
 
@@ -377,5 +499,71 @@ mod tests {
         let expected_bits = a.bits() * 2;
         assert!(squared.bits() <= expected_bits && squared.bits() >= expected_bits - 1);
         assert_eq!(squared.checked_sub(&squared).unwrap(), BigUint::zero());
+    }
+
+    #[test]
+    fn div_by_zero_errors() {
+        let a = BigUint::from_u64(10);
+        assert!(a.checked_divmod(&BigUint::zero()).is_err());
+    }
+
+    #[test]
+    fn divmod_edge_cases() {
+        let a = BigUint::from_u64(7);
+        let b = BigUint::from_u64(9);
+        assert_eq!(a.checked_divmod(&b).unwrap(), (BigUint::zero(), a.clone()));
+
+        let equal = BigUint::from_limbs(vec![42, 7]);
+        let (q, r) = equal.checked_divmod(&equal).unwrap();
+        assert_eq!(q, BigUint::from_u64(1));
+        assert_eq!(r, BigUint::zero());
+
+        // single-limb divisor fast path
+        let wide = BigUint::from_bytes(&[0xff; 40]);
+        let single = BigUint::from_u64(97);
+        let (q, r) = wide.checked_divmod(&single).unwrap();
+        assert_eq!(&(&q * &single) + &r, wide);
+        assert!(r < single);
+
+        // top-limb overflow: divisor top limb near u64::MAX, dividend
+        // top limbs push the qhat estimate past base and require
+        // Knuth's correction loop.
+        let divisor = BigUint::from_limbs(vec![u64::MAX, u64::MAX - 1]);
+        let dividend = BigUint::from_limbs(vec![0, 0, u64::MAX - 2, 5]);
+        let (q, r) = dividend.checked_divmod(&divisor).unwrap();
+        assert_eq!(&(&q * &divisor) + &r, dividend);
+        assert!(r < divisor);
+    }
+
+    #[test]
+    fn divmod_holds_invariant_on_seeded_random_cases() {
+        // xorshift64* PRNG, fixed seed: no external crate, reproducible.
+        fn next_u64(state: &mut u64) -> u64 {
+            *state ^= *state << 13;
+            *state ^= *state >> 7;
+            *state ^= *state << 17;
+            *state
+        }
+
+        fn random_biguint(state: &mut u64, limbs: usize) -> BigUint {
+            let limbs: Vec<u64> = (0..limbs).map(|_| next_u64(state)).collect();
+            BigUint::from_limbs(limbs)
+        }
+
+        let mut state = 0x9e3779b97f4a7c15u64;
+
+        for _ in 0..5000 {
+            let a_limbs = 1 + (next_u64(&mut state) % 6) as usize;
+            let b_limbs = 1 + (next_u64(&mut state) % 6) as usize;
+            let a = random_biguint(&mut state, a_limbs);
+            let mut b = random_biguint(&mut state, b_limbs);
+            if b.is_zero() {
+                b = BigUint::from_u64(1);
+            }
+
+            let (q, r) = a.checked_divmod(&b).unwrap();
+            assert_eq!(&(&q * &b) + &r, a);
+            assert!(r < b);
+        }
     }
 }
