@@ -56,6 +56,41 @@ authoritative CI on PRs; this is an optional self-hosted mirror.
 - **Manage Jenkins > Nodes** should show `rust-agent` online (no red X), or
 - `docker logs jenkins-rust-agent` should show a "Connected" message.
 
+## GitHub webhook trigger and commit status
+
+This controller runs locally, so GitHub can't reach it directly. A
+`smee-client` service forwards a public smee.io channel's webhook deliveries
+to `http://jenkins:8080/github-webhook/` inside the compose network, and the
+`cryptography-dev`/`cryptography-main` jobs are configured (via JCasC) with
+a `githubPush` trigger and post their result back to GitHub as the
+`continuous-integration/jenkins` commit status.
+
+Two manual, one-time steps (external services, can't be scripted from here):
+
+1. **Create a smee.io channel:** visit https://smee.io/new, copy the
+   generated URL into `ci/jenkins/.env` as `WEBHOOK_PROXY_URL`. Then, in the
+   repo's GitHub settings (**Settings > Webhooks > Add webhook**), set the
+   payload URL to that *same* smee.io URL, content type
+   `application/json`, event `Just the push event`.
+2. **Create a GitHub PAT** with `repo:status` scope
+   (https://github.com/settings/tokens), put it in `ci/jenkins/.env` as
+   `GITHUB_TOKEN`. This is consumed by the `github-status-token` Jenkins
+   credential (`casc/projects/cryptography/credentials.yaml`).
+
+Then start the forwarder:
+```
+docker compose -f ci/jenkins/docker-compose.yml up -d smee-client
+```
+
+**Verify:** open a PR against `dev` or push to `main` — a build should start
+within a minute (`docker logs jenkins-smee-client` shows a forwarded
+delivery), and the PR should show a `continuous-integration/jenkins` status
+check reflecting the build result.
+
+**Optional:** make that check a required status check under **Settings >
+Branches > Branch protection rules** — a GitHub repo setting, not something
+this config can set.
+
 ## Running the tests
 
 Two tiers, under `ci/jenkins/tests/`:
@@ -64,8 +99,13 @@ Two tiers, under `ci/jenkins/tests/`:
   boots healthy with no CasC load errors, and the configured security realm
   and plugin set are actually live.
 - **Project** (`tests/project/`): the `cryptography-dev` and
-  `cryptography-main` seed jobs exist and are buildable, and the Jenkinsfile
-  they share passes Jenkins' built-in Declarative Pipeline validator.
+  `cryptography-main` seed jobs exist and are buildable, the Jenkinsfile
+  they share passes Jenkins' built-in Declarative Pipeline validator, both
+  jobs have a `githubPush` trigger configured, and the
+  `github-status-token` credential is present. A real end-to-end webhook
+  delivery and status check can't be scripted here (needs a live smee.io
+  channel and a real GitHub push) — verify that manually per the webhook
+  section above.
 
 Run everything hermetically (brings the stack up, tests it, tears it down):
 ```
@@ -82,7 +122,10 @@ project needs no changes to `core/`:
 1. `cp -r ci/jenkins/casc/projects/cryptography ci/jenkins/casc/projects/<name>`
 2. Edit the copy's `agent.yaml` (node name/label) and `seed-job.yaml`
    (repo URL, branch, Jenkinsfile path). Add a `credentials.yaml` next to it
-   only if the repo isn't publicly clonable.
+   only if the repo isn't publicly clonable — give it its own domain name
+   (not `"_"`), since JCasC concatenates `domainCredentials` lists across
+   files rather than merging them by domain name; a second `"_"` entry
+   collides with `core/credentials.yaml`'s and silently drops credentials.
 3. Add a matching `<name>.Jenkinsfile` under `ci/jenkins/jenkinsfiles/`.
 4. Rebuild the controller image — the new overlay is picked up automatically
    since `controller.Dockerfile` copies all of `casc/`.
