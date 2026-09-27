@@ -11,7 +11,7 @@ if [ -f .env ]; then
     . ./.env
 fi
 
-JENKINS_URL="${JENKINS_URL:-http://localhost:8080}"
+JENKINS_URL="${JENKINS_EXTERNAL_URL:-http://localhost:8080}"
 JENKINS_ADMIN_ID="${JENKINS_ADMIN_ID:-admin}"
 
 if [ -z "${JENKINS_ADMIN_PASSWORD:-}" ]; then
