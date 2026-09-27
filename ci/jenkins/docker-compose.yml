@@ -12,7 +12,7 @@ services:
     environment:
       - JENKINS_ADMIN_ID=${JENKINS_ADMIN_ID:-admin}
       - JENKINS_ADMIN_PASSWORD=${JENKINS_ADMIN_PASSWORD}
-      - JENKINS_URL=${JENKINS_URL:-http://localhost:8080}
+      - JENKINS_URL=${JENKINS_EXTERNAL_URL:-http://localhost:8080}
       - JENKINS_ADMIN_EMAIL=${JENKINS_ADMIN_EMAIL:-admin@example.invalid}
     volumes:
       - jenkins_home:/var/jenkins_home
@@ -38,11 +38,13 @@ services:
     entrypoint:
       - sh
       - -c
+      # $$ escapes compose's own interpolation, so the shell (not compose)
+      # expands these from the container's environment at runtime.
       - >
         java -jar /usr/share/jenkins/agent.jar
-        -url "$JENKINS_URL"
-        -name "$JENKINS_AGENT_NAME"
-        -secret "$JENKINS_SECRET"
+        -url "$$JENKINS_URL"
+        -name "$$JENKINS_AGENT_NAME"
+        -secret "$$JENKINS_SECRET"
         -workDir "/home/jenkins/agent"
 
 volumes:
