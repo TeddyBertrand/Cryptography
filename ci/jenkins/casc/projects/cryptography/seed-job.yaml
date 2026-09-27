@@ -1,0 +1,18 @@
+# Public repo — anonymous HTTPS clone, no credential needed. If that
+# changes, add a credentials.yaml alongside this file (see core/credentials.yaml
+# for the shared domain wrapper) and reference its id in `credentials()` below.
+jobs:
+  - script: >
+      pipelineJob('cryptography') {
+        definition {
+          cpsScm {
+            scm {
+              git {
+                remote { url('https://github.com/TeddyBertrand/Cryptography.git') }
+                branches('*/main')
+              }
+            }
+            scriptPath('ci/jenkins/jenkinsfiles/cryptography.Jenkinsfile')
+          }
+        }
+      }
