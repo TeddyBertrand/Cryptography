@@ -1,0 +1,9 @@
+# Resolved by jenkins-plugin-cli against the pinned controller base image.
+# Keep versions pinned for reproducibility; bump deliberately.
+configuration-as-code:1809.v13675a_2154a_5
+job-dsl:1.90
+workflow-aggregator:600.vb_57cdd26fdd7
+git:5.7.0
+github:1.40.0
+matrix-auth:3.2.3
+credentials-binding:687.v620b_15b_c451c
