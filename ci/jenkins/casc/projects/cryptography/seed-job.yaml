@@ -8,6 +8,12 @@
 jobs:
   - script: >
       pipelineJob('cryptography-dev') {
+        properties {
+          githubProjectUrl('https://github.com/TeddyBertrand/Cryptography')
+        }
+        triggers {
+          githubPush()
+        }
         definition {
           cpsScm {
             scm {
@@ -22,6 +28,12 @@ jobs:
       }
   - script: >
       pipelineJob('cryptography-main') {
+        properties {
+          githubProjectUrl('https://github.com/TeddyBertrand/Cryptography')
+        }
+        triggers {
+          githubPush()
+        }
         definition {
           cpsScm {
             scm {
