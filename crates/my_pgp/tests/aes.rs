@@ -42,6 +42,32 @@ fn deciphers_the_subject_aes_block_example() {
 }
 
 #[test]
+fn ciphers_and_deciphers_aes_192_and_aes_256_blocks() {
+    let plaintext = b"\x00\x11\x22\x33\x44\x55\x66\x77\x88\x99\xaa\xbb\xcc\xdd\xee\xff";
+    let vectors = [
+        (
+            "03020100070605040b0a09080f0e0d0c1312111017161514",
+            b"a47ca9dde0df4c86a070af6e91710dec".as_slice(),
+        ),
+        (
+            "03020100070605040b0a09080f0e0d0c13121110171615141b1a19181f1e1d1c",
+            b"cab7a28ebf4567519049fcea8960494b".as_slice(),
+        ),
+    ];
+
+    for (key, ciphertext) in vectors {
+        let encrypted = run(&["aes", "-c", "-b", key], plaintext);
+
+        assert!(encrypted.status.success());
+        assert_eq!(encrypted.stdout, ciphertext);
+
+        let decrypted = run(&["aes", "-d", "-b", key], ciphertext);
+        assert!(decrypted.status.success());
+        assert_eq!(decrypted.stdout, plaintext);
+    }
+}
+
+#[test]
 fn stream_mode_roundtrips_a_partial_final_block() {
     let message = b"first AES block\nsecond block";
     let encrypted = run(&["aes", "-c", KEY], message);
