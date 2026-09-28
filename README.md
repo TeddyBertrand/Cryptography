@@ -251,6 +251,7 @@ cargo run --release --bin timing
 
 - `build-test-lint`: format check, build, `cargo test --workspace` and Clippy.
 - `retrocompat`: the functional suite, so every subject example keeps working.
+- `delivery`: the delivery tree check (see [Delivery](#delivery)).
 - `epitest-dump`: `make re` in the Epitech grading image, a check that `./my_pgp -h` runs, then the full and release test suites.
 
 **Jenkins** (`ci/jenkins/`) is an optional self-hosted mirror, defined entirely as code (Docker Compose and JCasC). The `cryptography-dev` and `cryptography-main` jobs run the same checks, plus line coverage with a 70% gate and an archived `my_pgp` binary. The `cryptography-nightly` job runs the benchmarks, plots them build over build, and runs the release suite. Every build posts a report to Discord. To start it locally:
@@ -263,6 +264,21 @@ docker compose -f ci/jenkins/docker-compose.yml up -d rust-agent
 ```
 
 [ci/jenkins/README.md](ci/jenkins/README.md) covers the GitHub webhook, commit statuses, notifications and the Jenkins test scripts.
+
+## Delivery
+
+The Epitech dump and the organization mirror, synced from `main`, receive every tracked file: the tree itself is the delivery. `sh scripts/check_delivery.sh` checks it, and CI runs it on every pull request (the `delivery` job on GitHub, the `Delivery tree` stage on Jenkins). It fails on:
+
+- build outputs and temp files: `target/`, the `my_pgp` binary, object files, editor backups, Valgrind core dumps;
+- secrets (`.env`);
+- binary files and files above 512 KiB, except the subject PDF;
+- a Makefile without the `all`, `re`, `clean` and `fclean` rules, or that does not build and remove `my_pgp`.
+
+The subject asks for bonus files to go in a `bonus/` directory. This repository has none, for these reasons:
+
+- **Bonus features are in the main binary.** X25519, signatures (`-s`), OAEP padding (`-p`) and random prime keys (`--bits`) are items of the subject itself, which asks for `-s` on the same program, for the second asymmetric cryptosystem to be "launched in a similar way than the others", and for every earlier example to keep working. They stay out of `-h`, so the help still matches the subject, and the functional suite runs the subject examples next to every bonus flag.
+- **`bench/` stays at the root.** Its `bench` and `timing` binaries measure the program without being part of it, like `tests/` and `ci/`.
+- **The subject PDF is tracked on purpose**, as the reference this README links to. It is the only binary the check allows (`ALLOWED` in the script).
 
 ## No external crates
 
