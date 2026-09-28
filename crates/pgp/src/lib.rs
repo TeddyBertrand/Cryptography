@@ -63,15 +63,13 @@ pub fn cipher_xor(
     let ciphered_key_hex = rsa::cipher_hex(&symmetric_key, &e, &n, padding)?;
 
     let xor = Xor::new(Bytes::new(symmetric_key)).map_err(|err| err.to_string())?;
+    let message = Bytes::new(message.to_vec());
     let ciphered_message = if block {
-        let mut reversed = message.to_vec();
-        reversed.reverse();
-        xor.cipher_block(&Bytes::new(reversed))
-            .map_err(|err| err.to_string())?
+        xor.cipher_block(&message)
     } else {
-        xor.cipher(&Bytes::new(message.to_vec()))
-            .map_err(|err| err.to_string())?
-    };
+        xor.cipher(&message)
+    }
+    .map_err(|err| err.to_string())?;
 
     Ok((ciphered_key_hex, encoding::hex::encode(&ciphered_message)))
 }
@@ -97,17 +95,12 @@ pub fn decipher_xor(
 
     let xor = Xor::new(Bytes::new(symmetric_key)).map_err(|err| err.to_string())?;
     let plaintext = if block {
-        let mut plaintext = xor
-            .cipher_block(&ciphertext)
-            .map_err(|err| err.to_string())?
-            .into_inner();
-        plaintext.reverse();
-        plaintext
+        xor.decipher_block(&ciphertext)
     } else {
         xor.decipher(&ciphertext)
-            .map_err(|err| err.to_string())?
-            .into_inner()
-    };
+    }
+    .map_err(|err| err.to_string())?
+    .into_inner();
 
     Ok(plaintext)
 }
