@@ -167,7 +167,7 @@ mod tests {
     }
 
     fn assert_cipher_rounds(vector: &Vector) {
-        let round_keys = key_expansion::expand_128(&key(vector)).unwrap();
+        let round_keys = key_expansion::expand(&key(vector), 10).unwrap();
         let mut state = block(vector.input);
         add_round_key(&mut state, &round_keys[0]);
 
@@ -188,7 +188,7 @@ mod tests {
     }
 
     fn assert_decipher_rounds(vector: &Vector) {
-        let round_keys = key_expansion::expand_128(&key(vector)).unwrap();
+        let round_keys = key_expansion::expand(&key(vector), 10).unwrap();
         let mut state = block(vector.output);
         add_round_key(&mut state, &round_keys[10]);
 

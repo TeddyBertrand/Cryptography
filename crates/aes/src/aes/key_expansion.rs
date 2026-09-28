@@ -59,6 +59,7 @@ pub fn expand(key: &Bytes, rounds: usize) -> Result<RoundKeys> {
 fn substitute_word(word: &mut [u8; 4]) {
     for byte in word {
         *byte = field::substitute(*byte);
+    }
 }
 
 #[cfg(test)]
@@ -67,7 +68,7 @@ mod tests {
     use crate::aes::block;
 
     fn assert_schedule(key: &str, expected: [&str; 11]) {
-        let round_keys = expand_128(&Bytes::new(block(key).to_vec())).unwrap();
+        let round_keys = expand(&Bytes::new(block(key).to_vec()), 10).unwrap();
 
         for (round, (round_key, expected)) in round_keys.iter().zip(expected).enumerate() {
             assert_eq!(*round_key, block(expected), "round key {round}");
@@ -111,5 +112,6 @@ mod tests {
                 "549932d1f08557681093ed9cbe2c974e",
                 "13111d7fe3944a17f307a78b4d2b30c5",
             ],
-     );
+        );
+    }
 }
