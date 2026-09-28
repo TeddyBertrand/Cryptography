@@ -27,6 +27,29 @@ pub fn is_probable_prime(n: &BigUint, rng: &mut Rng) -> random::Result<bool> {
     miller_rabin(n, MILLER_RABIN_ROUNDS, rng)
 }
 
+/// Random probable prime of exactly `bits` bits, with the top two bits set so that
+/// the product of two such primes has exactly `2 * bits` bits.
+pub fn gen_prime(bits: usize, rng: &mut Rng) -> random::Result<BigUint> {
+    assert!(bits >= 2, "gen_prime requires at least 2 bits");
+
+    let mut bytes = vec![0u8; bits.div_ceil(8)];
+    loop {
+        rng.fill_bytes(&mut bytes)?;
+        if !bits.is_multiple_of(8) {
+            let last = bytes.len() - 1;
+            bytes[last] &= (1u8 << (bits % 8)) - 1;
+        }
+        for bit in [bits - 1, bits - 2, 0] {
+            bytes[bit / 8] |= 1 << (bit % 8);
+        }
+
+        let candidate = BigUint::from_bytes(&bytes);
+        if is_probable_prime(&candidate, rng)? {
+            return Ok(candidate);
+        }
+    }
+}
+
 /// Miller-Rabin with random witnesses; `n` must be odd and at least 5.
 fn miller_rabin(n: &BigUint, rounds: usize, rng: &mut Rng) -> random::Result<bool> {
     let one = BigUint::from_u64(1);
@@ -220,5 +243,57 @@ mod tests {
             let expected = n.checked_divmod(&BigUint::from_u64(divisor)).unwrap().1;
             assert_eq!(BigUint::from_u64(rem_u64(&n, divisor)), expected);
         }
+    }
+
+    fn bit(n: &BigUint, index: usize) -> bool {
+        n.shr(index)
+            .limbs()
+            .first()
+            .is_some_and(|limb| limb & 1 == 1)
+    }
+
+    #[test]
+    fn gen_prime_has_requested_shape() {
+        let mut rng = Rng::new().unwrap();
+        for bits in [2usize, 3, 16, 64, 65, 256, 512] {
+            let p = gen_prime(bits, &mut rng).unwrap();
+            assert_eq!(p.bits(), bits, "wrong size for {bits}-bit prime");
+            assert!(
+                bit(&p, bits - 2),
+                "second top bit unset for {bits}-bit prime"
+            );
+            assert!(bit(&p, 0), "{bits}-bit prime is even");
+            assert!(is_probable_prime(&p, &mut rng).unwrap());
+        }
+    }
+
+    #[test]
+    fn gen_prime_product_has_double_size() {
+        let mut rng = Rng::new().unwrap();
+        let p = gen_prime(128, &mut rng).unwrap();
+        let q = gen_prime(128, &mut rng).unwrap();
+        assert_eq!((&p * &q).bits(), 256);
+    }
+
+    #[test]
+    #[ignore = "timing check, run with --release -- --ignored"]
+    fn gen_prime_1024_average_under_two_seconds() {
+        use std::time::{Duration, Instant};
+
+        const RUNS: u32 = 5;
+        let mut rng = Rng::new().unwrap();
+        let mut total = Duration::ZERO;
+        for _ in 0..RUNS {
+            let start = Instant::now();
+            gen_prime(1024, &mut rng).unwrap();
+            total += start.elapsed();
+        }
+
+        let average = total / RUNS;
+        println!("gen_prime(1024) average over {RUNS} runs: {average:?}");
+        assert!(
+            average < Duration::from_secs(2),
+            "average {average:?} above 2 s"
+        );
     }
 }
