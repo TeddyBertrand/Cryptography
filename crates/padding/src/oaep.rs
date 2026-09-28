@@ -59,22 +59,24 @@ pub fn decode(em: &[u8], k: usize) -> Result<Vec<u8>, String> {
     let db = xor(masked_db, &mgf1_sha256(&seed, masked_db.len()));
     let (l_hash, padded_message) = db.split_at(DIGEST_SIZE);
 
-    let mut invalid = (y != 0x00) | !equal(l_hash, &label_hash());
-    let mut message_start = None;
+    // The PS || 0x01 scan touches every byte and folds flags with masks, so its run time
+    // doesn't reveal where the separator is or which byte broke the padding.
+    let mut invalid = u8::from(y != 0x00) | u8::from(!equal(l_hash, &label_hash()));
+    let mut found = 0u8;
+    let mut message_start = 0usize;
     for (index, &byte) in padded_message.iter().enumerate() {
-        if message_start.is_none() {
-            match byte {
-                0x00 => {}
-                0x01 => message_start = Some(index + 1),
-                _ => invalid = true,
-            }
-        }
+        let is_zero = u8::from(byte == 0x00);
+        let is_one = u8::from(byte == 0x01);
+        let first_one = is_one & !found & 1;
+        message_start |= (index + 1) & 0usize.wrapping_sub(usize::from(first_one));
+        invalid |= !found & !is_zero & !is_one & 1;
+        found |= is_one;
     }
 
-    match message_start {
-        Some(start) if !invalid => Ok(padded_message[start..].to_vec()),
-        _ => Err(decryption_error()),
+    if (invalid | (found ^ 1)) != 0 {
+        return Err(decryption_error());
     }
+    Ok(padded_message[message_start..].to_vec())
 }
 
 fn decryption_error() -> String {
@@ -116,6 +118,45 @@ mod tests {
 
     fn reference_seed() -> [u8; DIGEST_SIZE] {
         std::array::from_fn(|index| index as u8)
+    }
+
+    /// Masks a hand-built `DB` into a `k`-byte `EM`, to feed `decode` malformed padding.
+    fn mask_db(db: &[u8]) -> Vec<u8> {
+        let seed = reference_seed();
+        let masked_db = xor(db, &mgf1_sha256(&seed, db.len()));
+        let masked_seed = xor(&seed, &mgf1_sha256(&masked_db, DIGEST_SIZE));
+        [&[0x00], &masked_seed[..], &masked_db[..]].concat()
+    }
+
+    fn db_with_padding(padding: &[u8]) -> Vec<u8> {
+        let mut db = label_hash().to_vec();
+        db.extend_from_slice(padding);
+        db.resize(K - DIGEST_SIZE - 1, 0xab);
+        db
+    }
+
+    #[test]
+    fn rejects_padding_without_separator() {
+        let mut db = label_hash().to_vec();
+        db.resize(K - DIGEST_SIZE - 1, 0x00);
+
+        assert_eq!(decode(&mask_db(&db), K), Err(decryption_error()));
+    }
+
+    #[test]
+    fn rejects_non_zero_byte_before_separator() {
+        let db = db_with_padding(&[0x00, 0x02, 0x00, 0x01]);
+
+        assert_eq!(decode(&mask_db(&db), K), Err(decryption_error()));
+    }
+
+    #[test]
+    fn keeps_separator_and_junk_bytes_after_the_first_separator() {
+        let db = db_with_padding(&[0x00, 0x00, 0x01, 0x00, 0x01, 0x02]);
+        let message = &db[DIGEST_SIZE + 3..];
+
+        assert_eq!(decode(&mask_db(&db), K).unwrap(), message);
+        assert_eq!(&message[..3], [0x00, 0x01, 0x02]);
     }
 
     #[test]
