@@ -30,7 +30,7 @@ fn ciphers_the_subject_aes_block_example() {
     let output = run(&["aes", "-c", "-b", KEY], b"All men must die\n");
 
     assert!(output.status.success());
-    assert_eq!(output.stdout, CIPHERTEXT);
+    assert_eq!(output.stdout, [CIPHERTEXT, b"\n"].concat());
 }
 
 #[test]
@@ -38,7 +38,7 @@ fn deciphers_the_subject_aes_block_example() {
     let output = run(&["aes", "-d", "-b", KEY], &[CIPHERTEXT, b"\n"].concat());
 
     assert!(output.status.success());
-    assert_eq!(output.stdout, b"All men must die");
+    assert_eq!(output.stdout, b"All men must die\n");
 }
 
 #[test]
@@ -59,11 +59,11 @@ fn ciphers_and_deciphers_aes_192_and_aes_256_blocks() {
         let encrypted = run(&["aes", "-c", "-b", key], plaintext);
 
         assert!(encrypted.status.success());
-        assert_eq!(encrypted.stdout, ciphertext);
+        assert_eq!(encrypted.stdout, [ciphertext, b"\n"].concat());
 
         let decrypted = run(&["aes", "-d", "-b", key], ciphertext);
         assert!(decrypted.status.success());
-        assert_eq!(decrypted.stdout, plaintext);
+        assert_eq!(decrypted.stdout, [plaintext.as_slice(), b"\n"].concat());
     }
 }
 
@@ -73,7 +73,8 @@ fn stream_mode_roundtrips_a_partial_final_block() {
     let encrypted = run(&["aes", "-c", KEY], message);
 
     assert!(encrypted.status.success());
-    assert_eq!(encrypted.stdout.len() % 32, 0);
+    let hex = encrypted.stdout.strip_suffix(b"\n").expect("one hex line");
+    assert_eq!(hex.len() % 32, 0);
 
     let decrypted = run(&["aes", "-d", KEY], &encrypted.stdout);
     assert!(decrypted.status.success());
@@ -85,7 +86,7 @@ fn stream_mode_keeps_a_complete_block_unpadded() {
     let encrypted = run(&["aes", "-c", KEY], b"All men must die");
 
     assert!(encrypted.status.success());
-    assert_eq!(encrypted.stdout, CIPHERTEXT);
+    assert_eq!(encrypted.stdout, [CIPHERTEXT, b"\n"].concat());
 }
 
 #[test]
@@ -94,7 +95,8 @@ fn stream_mode_zero_pads_only_the_final_partial_block() {
     let encrypted = run(&["aes", "-c", KEY], message);
 
     assert!(encrypted.status.success());
-    assert_eq!(encrypted.stdout.len(), 64);
+    let hex = encrypted.stdout.strip_suffix(b"\n").expect("one hex line");
+    assert_eq!(hex.len(), 64);
 
     let decrypted = run(&["aes", "-d", KEY], &encrypted.stdout);
     assert!(decrypted.status.success());

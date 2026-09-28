@@ -45,7 +45,8 @@ fn run_xor(command: &Command, mut message: Vec<u8>) -> Result<Vec<u8>> {
     };
 
     Ok(match command.mode {
-        Mode::Cipher => hex::encode(&output).into_bytes(),
+        Mode::Cipher => hex_line(&output),
+        _ if command.block => with_trailing_lf(output.into_inner()),
         _ => output.into_inner(),
     })
 }
@@ -86,8 +87,9 @@ fn run_aes(command: &Command, mut message: Vec<u8>) -> Result<Vec<u8>> {
     Ok(match command.mode {
         Mode::Cipher => {
             aes::reverse_words(&mut output);
-            hex::encode(&output).into_bytes()
+            hex_line(&output)
         }
+        _ if command.block => with_trailing_lf(output.into_inner()),
         _ => output.into_inner(),
     })
 }
@@ -211,6 +213,18 @@ fn strip_trailing_lf(message: &mut Vec<u8>) {
             message.pop();
         }
     }
+}
+
+/// Ends a one-line result with the `\n` the subject's examples print, giving back the line
+/// feed `strip_trailing_lf` took from the input.
+fn with_trailing_lf(mut output: Vec<u8>) -> Vec<u8> {
+    output.push(b'\n');
+    output
+}
+
+/// Ciphered bytes as one line of hexadecimal.
+fn hex_line(bytes: &[u8]) -> Vec<u8> {
+    with_trailing_lf(hex::encode(bytes).into_bytes())
 }
 
 fn write_output(output: &[u8]) -> Result<()> {

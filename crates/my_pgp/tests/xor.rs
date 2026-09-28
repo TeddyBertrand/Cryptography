@@ -30,7 +30,7 @@ fn ciphers_the_subject_block_example() {
     let output = run(&["xor", "-c", "-b", KEY], b"You know nothing, Jon Snow\n");
 
     assert!(output.status.success());
-    assert_eq!(output.stdout, CIPHERTEXT);
+    assert_eq!(output.stdout, [CIPHERTEXT, b"\n"].concat());
 }
 
 #[test]
@@ -38,7 +38,7 @@ fn deciphers_the_subject_block_example() {
     let output = run(&["xor", "-d", "-b", KEY], &[CIPHERTEXT, b"\n"].concat());
 
     assert!(output.status.success());
-    assert_eq!(output.stdout, b"You know nothing, Jon Snow");
+    assert_eq!(output.stdout, b"You know nothing, Jon Snow\n");
 }
 
 #[test]
@@ -63,7 +63,8 @@ fn stream_mode_roundtrips_multiline_input_ending_in_a_newline() {
     let encrypted = run(&["xor", "-c", "10203040"], message);
 
     assert!(encrypted.status.success());
-    assert_eq!(encrypted.stdout.len() % 8, 0);
+    let hex = encrypted.stdout.strip_suffix(b"\n").expect("one hex line");
+    assert_eq!(hex.len() % 8, 0);
 
     let decrypted = run(&["xor", "-d", "10203040"], &encrypted.stdout);
     assert!(decrypted.status.success());
@@ -75,7 +76,7 @@ fn stream_mode_pads_only_a_partial_final_block() {
     let encrypted = run(&["xor", "-c", "1020"], b"abc");
 
     assert!(encrypted.status.success());
-    assert_eq!(encrypted.stdout, b"71427320");
+    assert_eq!(encrypted.stdout, b"71427320\n");
 
     let decrypted = run(&["xor", "-d", "1020"], &encrypted.stdout);
     assert!(decrypted.status.success());
