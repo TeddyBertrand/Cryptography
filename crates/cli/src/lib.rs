@@ -28,6 +28,8 @@ where
             p: p.clone(),
             q: q.clone(),
         },
+        (Some(spec::GENERATE), Some([])) if system == CryptoSystem::X25519 => Mode::GenerateX25519,
+        (Some(spec::GENERATE), _) => return Err(Error::new("'-g' requires P and Q with rsa")),
         (Some(spec::BITS), _) => Mode::GenerateRandom {
             bits: matches
                 .value(spec::BITS)
@@ -37,14 +39,20 @@ where
         _ => return Err(Error::new("missing MODE")),
     };
 
-    if system != CryptoSystem::Rsa {
-        match mode {
-            Mode::Generate { .. } => return Err(Error::new("'-g' is only available with rsa")),
-            Mode::GenerateRandom { .. } => {
-                return Err(Error::new("'--bits' is only available with rsa"))
-            }
-            Mode::Cipher | Mode::Decipher => {}
+    match (system, &mode) {
+        (CryptoSystem::Rsa, Mode::GenerateX25519) => {
+            return Err(Error::new("'-g' is only available with X25519"))
         }
+        (CryptoSystem::X25519, Mode::Generate { .. }) => {
+            return Err(Error::new("'-g' is only available with rsa"))
+        }
+        (CryptoSystem::Rsa | CryptoSystem::X25519, _) => {}
+        (_, Mode::Generate { .. }) => return Err(Error::new("'-g' is only available with rsa")),
+        (_, Mode::GenerateX25519) => return Err(Error::new("'-g' is only available with X25519")),
+        (_, Mode::GenerateRandom { .. }) => {
+            return Err(Error::new("'--bits' is only available with rsa"))
+        }
+        (_, Mode::Cipher | Mode::Decipher) => {}
     }
 
     let padding = matches.is_present(spec::PADDING);
@@ -161,6 +169,11 @@ Cipher or decipher MESSAGE using a given CRYPTO_SYSTEM. The MESSAGE is read from
             command(&["X25519", "-c", "00"]).system,
             CryptoSystem::X25519
         );
+    }
+
+    #[test]
+    fn generates_x25519_key_pair() {
+        assert_eq!(command(&["X25519", "-g"]).mode, Mode::GenerateX25519);
     }
 
     #[test]

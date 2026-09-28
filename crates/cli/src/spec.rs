@@ -53,7 +53,7 @@ pub fn parser() -> Parser {
         )
         .arg(
             Arg::flag(GENERATE, "-g")
-                .values(&["P", "Q"])
+                .optional_values(&["P", "Q"])
                 .section("MODE")
                 .group(MODE)
                 .help(
