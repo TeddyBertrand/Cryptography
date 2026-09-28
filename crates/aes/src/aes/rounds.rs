@@ -70,46 +70,29 @@ fn inverse_shift_rows(state: &mut State) {
     }
 }
 
+/// Each output byte is `2·x ^ 3·y ^ z ^ w` over the column, computed as
+/// `x ^ (a ^ b ^ c ^ d) ^ 2·(x ^ y)` so it needs one `xtime` per byte.
 fn mix_columns(state: &mut State) {
-    let previous = *state;
-    for column in 0..4 {
-        let offset = column * 4;
-        let a = previous[offset];
-        let b = previous[offset + 1];
-        let c = previous[offset + 2];
-        let d = previous[offset + 3];
-        state[offset] = field::multiply(a, 2) ^ field::multiply(b, 3) ^ c ^ d;
-        state[offset + 1] = a ^ field::multiply(b, 2) ^ field::multiply(c, 3) ^ d;
-        state[offset + 2] = a ^ b ^ field::multiply(c, 2) ^ field::multiply(d, 3);
-        state[offset + 3] = field::multiply(a, 3) ^ b ^ c ^ field::multiply(d, 2);
+    for column in state.as_chunks_mut::<4>().0 {
+        let [a, b, c, d] = *column;
+        let all = a ^ b ^ c ^ d;
+        column[0] = a ^ all ^ field::xtime(a ^ b);
+        column[1] = b ^ all ^ field::xtime(b ^ c);
+        column[2] = c ^ all ^ field::xtime(c ^ d);
+        column[3] = d ^ all ^ field::xtime(d ^ a);
     }
 }
 
+/// The inverse matrix is the forward one times `{04}x^2 + {05}` (The Design of Rijndael,
+/// section 4.1.3): add `4·(a ^ c)` and `4·(b ^ d)` to the column, then mix it forward.
 fn inverse_mix_columns(state: &mut State) {
-    let previous = *state;
-    for column in 0..4 {
-        let offset = column * 4;
-        let a = previous[offset];
-        let b = previous[offset + 1];
-        let c = previous[offset + 2];
-        let d = previous[offset + 3];
-        state[offset] = field::multiply(a, 14)
-            ^ field::multiply(b, 11)
-            ^ field::multiply(c, 13)
-            ^ field::multiply(d, 9);
-        state[offset + 1] = field::multiply(a, 9)
-            ^ field::multiply(b, 14)
-            ^ field::multiply(c, 11)
-            ^ field::multiply(d, 13);
-        state[offset + 2] = field::multiply(a, 13)
-            ^ field::multiply(b, 9)
-            ^ field::multiply(c, 14)
-            ^ field::multiply(d, 11);
-        state[offset + 3] = field::multiply(a, 11)
-            ^ field::multiply(b, 13)
-            ^ field::multiply(c, 9)
-            ^ field::multiply(d, 14);
+    for column in state.as_chunks_mut::<4>().0 {
+        let [a, b, c, d] = *column;
+        let even = field::xtime(field::xtime(a ^ c));
+        let odd = field::xtime(field::xtime(b ^ d));
+        *column = [a ^ even, b ^ odd, c ^ even, d ^ odd];
     }
+    mix_columns(state);
 }
 
 #[cfg(test)]
