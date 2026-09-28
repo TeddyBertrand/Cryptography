@@ -47,16 +47,42 @@ where
         }
     }
 
+    let padding = matches.is_present(spec::PADDING);
+    if padding {
+        if matches!(system, CryptoSystem::Xor | CryptoSystem::Aes) {
+            return Err(Error::new(
+                "'-p' is only available with rsa, pgp-xor and pgp-aes",
+            ));
+        }
+        if mode.is_generate() {
+            return Err(Error::new("'-p' cannot be used with key generation"));
+        }
+    }
+
     let key = matches.value(spec::KEY).map(String::from);
     if key.is_none() && !mode.is_generate() {
         return Err(Error::new("missing key"));
+    }
+
+    let sign_key = matches.value(spec::SIGN_KEY).map(String::from);
+    if matches.is_present(spec::SIGN) {
+        if mode.is_generate() {
+            return Err(Error::new("'-s' cannot be used with key generation"));
+        }
+        if sign_key.is_none() {
+            return Err(Error::new("missing signing key"));
+        }
+    } else if sign_key.is_some() {
+        return Err(Error::new("a signing key requires '-s'"));
     }
 
     Ok(Outcome::Run(Command {
         system,
         mode,
         block: matches.is_present(spec::BLOCK),
+        padding,
         key,
+        sign_key,
     }))
 }
 
@@ -173,6 +199,79 @@ Cipher or decipher MESSAGE using a given CRYPTO_SYSTEM. The MESSAGE is read from
             &["rsa", "--bits", "512", "k"],
             &["rsa", "-g", "d3", "e3", "--bits", "512"],
             &["rsa", "-c", "--bits", "512"],
+        ];
+        for args in invalid {
+            assert!(run(args).is_err(), "expected error for {args:?}");
+        }
+    }
+
+    #[test]
+    fn padding_flag_for_rsa_and_pgp() {
+        assert!(!command(&["rsa", "-c", "k"]).padding);
+        assert!(command(&["rsa", "-c", "-p", "k"]).padding);
+        assert!(command(&["rsa", "-d", "-p", "k"]).padding);
+        assert!(command(&["pgp-xor", "-c", "-p", "k:r"]).padding);
+        assert!(command(&["pgp-aes", "-d", "-b", "-p", "k:r"]).padding);
+    }
+
+    #[test]
+    fn invalid_padding_forms_are_errors() {
+        assert_eq!(
+            run(&["xor", "-c", "-p", "k"]),
+            Err(Error::new(
+                "'-p' is only available with rsa, pgp-xor and pgp-aes"
+            ))
+        );
+        assert_eq!(
+            run(&["aes", "-d", "-p", "k"]),
+            Err(Error::new(
+                "'-p' is only available with rsa, pgp-xor and pgp-aes"
+            ))
+        );
+        assert_eq!(
+            run(&["rsa", "-g", "d3", "e3", "-p"]),
+            Err(Error::new("'-p' cannot be used with key generation"))
+        );
+        assert_eq!(
+            run(&["rsa", "--bits", "1024", "-p"]),
+            Err(Error::new("'-p' cannot be used with key generation"))
+        );
+        assert!(run(&["rsa", "-c", "-p", "-p", "k"]).is_err());
+    }
+
+    #[test]
+    fn sign_flag_takes_a_signing_key() {
+        assert_eq!(command(&["rsa", "-c", "k"]).sign_key, None);
+        let cmd = command(&["pgp-aes", "-c", "-s", "k:r", "d-n"]);
+        assert_eq!(cmd.key.as_deref(), Some("k:r"));
+        assert_eq!(cmd.sign_key.as_deref(), Some("d-n"));
+        assert_eq!(
+            command(&["xor", "-d", "-b", "-s", "k", "e-n"])
+                .sign_key
+                .as_deref(),
+            Some("e-n")
+        );
+    }
+
+    #[test]
+    fn invalid_sign_forms_are_errors() {
+        assert_eq!(
+            run(&["rsa", "-c", "-s", "k"]),
+            Err(Error::new("missing signing key"))
+        );
+        assert_eq!(
+            run(&["rsa", "-c", "k", "d-n"]),
+            Err(Error::new("a signing key requires '-s'"))
+        );
+        assert_eq!(
+            run(&["rsa", "-g", "d3", "e3", "-s"]),
+            Err(Error::new("'-s' cannot be used with key generation"))
+        );
+        let invalid: &[&[&str]] = &[
+            &["rsa", "-c", "-s"],
+            &["rsa", "-g", "d3", "e3", "-s", "d-n"],
+            &["rsa", "-c", "-s", "-s", "k", "d-n"],
+            &["rsa", "-c", "-s", "k", "d-n", "extra"],
         ];
         for args in invalid {
             assert!(run(args).is_err(), "expected error for {args:?}");

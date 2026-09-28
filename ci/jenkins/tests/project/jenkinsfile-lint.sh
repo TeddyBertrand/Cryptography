@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
-# Assumes the controller is already up and healthy. Validates the
-# cryptography Jenkinsfile against Jenkins' built-in Declarative Pipeline
+# Assumes the controller is already up and healthy. Validates every
+# Jenkinsfile under jenkinsfiles/ against Jenkins' built-in Declarative Pipeline
 # linter — a real syntax/semantic check without needing the agent up.
 set -eu
 
@@ -19,12 +19,17 @@ if [ -z "${JENKINS_ADMIN_PASSWORD:-}" ]; then
     exit 84
 fi
 
-result=$(curl -sf -u "${JENKINS_ADMIN_ID}:${JENKINS_ADMIN_PASSWORD}" \
-    -F "jenkinsfile=<jenkinsfiles/cryptography.Jenkinsfile" \
-    "${JENKINS_URL}/pipeline-model-converter/validate")
+status=0
+for jenkinsfile in jenkinsfiles/*.Jenkinsfile; do
+    result=$(curl -sf -u "${JENKINS_ADMIN_ID}:${JENKINS_ADMIN_PASSWORD}" \
+        -F "jenkinsfile=<${jenkinsfile}" \
+        "${JENKINS_URL}/pipeline-model-converter/validate")
 
-echo "$result"
-case "$result" in
-    *"Jenkinsfile successfully validated"*) exit 0 ;;
-    *) echo "Jenkinsfile validation failed" >&2; exit 84 ;;
-esac
+    echo "${jenkinsfile}: $result"
+    case "$result" in
+        *"Jenkinsfile successfully validated"*) ;;
+        *) echo "${jenkinsfile} validation failed" >&2; status=84 ;;
+    esac
+done
+
+exit "$status"

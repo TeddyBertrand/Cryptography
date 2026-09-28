@@ -61,11 +61,14 @@ name = "my_pgp"
 version = "0.1.0"
 dependencies = [
  "aes",
+ "bigint",
  "cli",
  "core",
  "encoding",
  "padding",
  "pgp",
+ "prime",
+ "random",
  "rsa",
  "sign",
  "x25519",
@@ -109,6 +112,7 @@ version = "0.1.0"
 dependencies = [
  "bigint",
  "encoding",
+ "padding",
  "prime",
  "random",
 ]
@@ -117,6 +121,7 @@ dependencies = [
 name = "sign"
 version = "0.1.0"
 dependencies = [
+ "bigint",
  "hash",
  "rsa",
 ]

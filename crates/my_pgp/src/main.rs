@@ -9,11 +9,15 @@ use core::{Bytes, Cipher, Error, Result};
 use encoding::hex;
 use xor::Xor;
 
-fn run_xor(command: Command) -> Result<()> {
-    let key = command.key.ok_or_else(|| Error::new("missing key"))?;
-    let cipher = Xor::new(Bytes::new(hex::decode(&key).map_err(Error::new)?))?;
-    let message = read_message(command.block)?;
-    let encrypting = matches!(&command.mode, Mode::Cipher);
+fn run_xor(command: &Command, mut message: Vec<u8>) -> Result<Vec<u8>> {
+    let key = command
+        .key
+        .as_deref()
+        .ok_or_else(|| Error::new("missing key"))?;
+    let cipher = Xor::new(Bytes::new(hex::decode(key).map_err(Error::new)?))?;
+    if command.block {
+        strip_trailing_lf(&mut message);
+    }
 
     let output = match command.mode {
         Mode::Cipher if command.block => {
@@ -40,24 +44,23 @@ fn run_xor(command: Command) -> Result<()> {
         }
     };
 
-    if encrypting {
-        io::stdout()
-            .write_all(hex::encode(&output).as_bytes())
-            .map_err(|err| Error::new(format!("failed to write standard output: {err}")))
-    } else {
-        io::stdout()
-            .write_all(&output)
-            .map_err(|err| Error::new(format!("failed to write standard output: {err}")))
-    }
+    Ok(match command.mode {
+        Mode::Cipher => hex::encode(&output).into_bytes(),
+        _ => output.into_inner(),
+    })
 }
 
-fn run_aes(command: Command) -> Result<()> {
-    let key = command.key.ok_or_else(|| Error::new("missing key"))?;
-    let mut key = hex::decode(&key).map_err(Error::new)?;
+fn run_aes(command: &Command, mut message: Vec<u8>) -> Result<Vec<u8>> {
+    let key = command
+        .key
+        .as_deref()
+        .ok_or_else(|| Error::new("missing key"))?;
+    let mut key = hex::decode(key).map_err(Error::new)?;
     aes::reverse_words(&mut key);
     let cipher = Aes::get_aes_key(Bytes::new(key))?;
-    let message = read_message(command.block)?;
-    let encrypting = matches!(&command.mode, Mode::Cipher);
+    if command.block {
+        strip_trailing_lf(&mut message);
+    }
 
     let mut output = match command.mode {
         Mode::Cipher if command.block => cipher.cipher_block(&Bytes::new(message))?,
@@ -80,66 +83,64 @@ fn run_aes(command: Command) -> Result<()> {
         }
     };
 
-    if encrypting {
-        aes::reverse_words(&mut output);
-        io::stdout()
-            .write_all(hex::encode(&output).as_bytes())
-            .map_err(|err| Error::new(format!("failed to write standard output: {err}")))
+    Ok(match command.mode {
+        Mode::Cipher => {
+            aes::reverse_words(&mut output);
+            hex::encode(&output).into_bytes()
+        }
+        _ => output.into_inner(),
+    })
+}
+
+/// Maps the `-p` flag to the padding applied around the RSA step.
+fn rsa_padding(command: &Command) -> rsa::Padding {
+    if command.padding {
+        rsa::Padding::Oaep
     } else {
-        io::stdout()
-            .write_all(&output)
-            .map_err(|err| Error::new(format!("failed to write standard output: {err}")))
+        rsa::Padding::None
     }
 }
 
-fn run_x25519(command: Command) -> Result<()> {
-    let key = command.key.ok_or_else(|| Error::new("missing key"))?;
-    let message = read_message(false)?;
-    let encrypting = matches!(&command.mode, Mode::Cipher);
-
-    let output = match command.mode {
-        Mode::Cipher => x25519::cipher(&message, &key).map_err(Error::new)?,
-        Mode::Decipher => {
-            let encoded = std::str::from_utf8(&message)
-                .map_err(|_| Error::new("ciphertext must be UTF-8 hexadecimal text"))?;
-            let ciphertext = hex::decode(encoded).map_err(Error::new)?;
-            x25519::decipher(&ciphertext, &key).map_err(Error::new)?
-        }
-        Mode::Generate { .. } | Mode::GenerateRandom { .. } => {
-            return Err(Error::new("invalid X25519 mode"))
-        }
-    };
-
-    if encrypting {
-        io::stdout()
-            .write_all(hex::encode(&output).as_bytes())
-            .map_err(|err| Error::new(format!("failed to write standard output: {err}")))
-    } else {
-        io::stdout()
-            .write_all(&output)
-            .map_err(|err| Error::new(format!("failed to write standard output: {err}")))
-    }
-}
-
-fn run_rsa(command: Command) -> Result<()> {
-    let key = command.key.ok_or_else(|| Error::new("missing key"))?;
-    let (exponent, n) = rsa::parse_key(&key).map_err(Error::new)?;
-    let message = read_message(true)?;
+fn run_x25519(command: &Command, message: Vec<u8>) -> Result<Vec<u8>> {
+    let key = command
+        .key
+        .as_deref()
+        .ok_or_else(|| Error::new("missing key"))?;
 
     match command.mode {
         Mode::Cipher => {
-            let ciphertext = rsa::cipher_hex(&message, &exponent, &n).map_err(Error::new)?;
-            io::stdout()
-                .write_all(ciphertext.as_bytes())
-                .map_err(|err| Error::new(format!("failed to write standard output: {err}")))
+            Ok(hex::encode(&x25519::cipher(&message, key).map_err(Error::new)?).into_bytes())
+        }
+        Mode::Decipher => {
+            let encoded = std::str::from_utf8(&message)
+                .map_err(|_| Error::new("ciphertext must be UTF-8 hexadecimal text"))?;
+            x25519::decipher(&hex::decode(encoded).map_err(Error::new)?, key).map_err(Error::new)
+        }
+        Mode::Generate { .. } | Mode::GenerateRandom { .. } => {
+            Err(Error::new("invalid X25519 mode"))
+        }
+    }
+}
+
+fn run_rsa(command: &Command, mut message: Vec<u8>) -> Result<Vec<u8>> {
+    let padding = rsa_padding(command);
+    let key = command
+        .key
+        .as_deref()
+        .ok_or_else(|| Error::new("missing key"))?;
+    let (exponent, n) = rsa::parse_key(key).map_err(Error::new)?;
+    strip_trailing_lf(&mut message);
+
+    match command.mode {
+        Mode::Cipher => {
+            let ciphertext =
+                rsa::cipher_hex(&message, &exponent, &n, padding).map_err(Error::new)?;
+            Ok(ciphertext.into_bytes())
         }
         Mode::Decipher => {
             let ciphertext_hex = std::str::from_utf8(&message)
                 .map_err(|_| Error::new("ciphertext must be UTF-8 hexadecimal text"))?;
-            let plaintext = rsa::decipher_hex(ciphertext_hex, &exponent, &n).map_err(Error::new)?;
-            io::stdout()
-                .write_all(&plaintext)
-                .map_err(|err| Error::new(format!("failed to write standard output: {err}")))
+            rsa::decipher_hex(ciphertext_hex, &exponent, &n, padding).map_err(Error::new)
         }
         Mode::Generate { .. } | Mode::GenerateRandom { .. } => {
             unreachable!("run_command only dispatches cipher/decipher here")
@@ -147,35 +148,38 @@ fn run_rsa(command: Command) -> Result<()> {
     }
 }
 
-type PgpCipher = fn(&[u8], bool, &str) -> std::result::Result<(String, String), String>;
-type PgpDecipher = fn(&str, bool, &str) -> std::result::Result<Vec<u8>, String>;
+type PgpCipher =
+    fn(&[u8], bool, rsa::Padding, &str) -> std::result::Result<(String, String), String>;
+type PgpDecipher = fn(&str, bool, rsa::Padding, &str) -> std::result::Result<Vec<u8>, String>;
 
 /// Shared `pgp-*` plumbing: the symmetric layer is picked by the `cipher`/`decipher` pair.
-/// `strip_trailing_lf` mirrors how the matching plain symmetric system reads its message.
+/// `strip_lf` mirrors how the matching plain symmetric system reads its message.
 fn run_pgp(
-    command: Command,
-    strip_trailing_lf: bool,
+    command: &Command,
+    mut message: Vec<u8>,
+    strip_lf: bool,
     cipher: PgpCipher,
     decipher: PgpDecipher,
-) -> Result<()> {
-    let key = command.key.ok_or_else(|| Error::new("missing key"))?;
-    let message = read_message(strip_trailing_lf)?;
+) -> Result<Vec<u8>> {
+    let padding = rsa_padding(command);
+    let key = command
+        .key
+        .as_deref()
+        .ok_or_else(|| Error::new("missing key"))?;
+    if strip_lf {
+        strip_trailing_lf(&mut message);
+    }
 
     match command.mode {
         Mode::Cipher => {
             let (ciphered_key_hex, ciphered_message_hex) =
-                cipher(&message, command.block, &key).map_err(Error::new)?;
-            println!("{ciphered_key_hex}");
-            println!("{ciphered_message_hex}");
-            Ok(())
+                cipher(&message, command.block, padding, key).map_err(Error::new)?;
+            Ok(format!("{ciphered_key_hex}\n{ciphered_message_hex}\n").into_bytes())
         }
         Mode::Decipher => {
             let ciphertext_hex = std::str::from_utf8(&message)
                 .map_err(|_| Error::new("ciphertext must be UTF-8 hexadecimal text"))?;
-            let plaintext = decipher(ciphertext_hex, command.block, &key).map_err(Error::new)?;
-            io::stdout()
-                .write_all(&plaintext)
-                .map_err(|err| Error::new(format!("failed to write standard output: {err}")))
+            decipher(ciphertext_hex, command.block, padding, key).map_err(Error::new)
         }
         Mode::Generate { .. } | Mode::GenerateRandom { .. } => {
             unreachable!("run_command only dispatches cipher/decipher here")
@@ -190,51 +194,111 @@ fn print_rsa_keys(keys: &rsa::KeyPair) -> Result<()> {
     Ok(())
 }
 
-fn read_message(strip_trailing_lf: bool) -> Result<Vec<u8>> {
+fn read_message() -> Result<Vec<u8>> {
     let mut message = Vec::new();
     io::stdin()
         .read_to_end(&mut message)
         .map_err(|err| Error::new(format!("failed to read standard input: {err}")))?;
 
-    if strip_trailing_lf && message.last() == Some(&b'\n') {
+    Ok(message)
+}
+
+/// Drops one trailing `\n` (or `\r\n`), as left by `echo` or a text editor.
+fn strip_trailing_lf(message: &mut Vec<u8>) {
+    if message.last() == Some(&b'\n') {
         message.pop();
         if message.last() == Some(&b'\r') {
             message.pop();
         }
     }
+}
+
+fn write_output(output: &[u8]) -> Result<()> {
+    io::stdout()
+        .write_all(output)
+        .map_err(|err| Error::new(format!("failed to write standard output: {err}")))
+}
+
+/// `-s` when ciphering: signs the ciphered output (minus its trailing newline) and appends the
+/// signature as its last line.
+fn sign_output(mut output: Vec<u8>, key: &str) -> Result<Vec<u8>> {
+    strip_trailing_lf(&mut output);
+    let signature = sign::sign_hex(&output, key).map_err(Error::new)?;
+    output.push(b'\n');
+    output.extend_from_slice(signature.as_bytes());
+    output.push(b'\n');
+
+    Ok(output)
+}
+
+/// Bytes the signature of a ciphered `message` covers: the ciphered output as printed. For
+/// `pgp-*` that includes the ciphered symmetric key, given back in the key argument.
+fn signed_payload(command: &Command, message: &[u8]) -> Result<Vec<u8>> {
+    match command.system {
+        CryptoSystem::PgpXor | CryptoSystem::PgpAes => {
+            let key = command
+                .key
+                .as_deref()
+                .ok_or_else(|| Error::new("missing key"))?;
+            let (ciphered_key, _) = pgp::split_key(key).map_err(Error::new)?;
+            Ok([ciphered_key.as_bytes(), b"\n", message].concat())
+        }
+        CryptoSystem::Xor | CryptoSystem::Aes | CryptoSystem::X25519 | CryptoSystem::Rsa => {
+            Ok(message.to_vec())
+        }
+    }
+}
+
+/// `-s` when deciphering: splits the signature off the last line, checks it over the rest and
+/// returns the rest, the ciphered message to decipher.
+fn verify_input(command: &Command, mut message: Vec<u8>, key: &str) -> Result<Vec<u8>> {
+    strip_trailing_lf(&mut message);
+    let split = message
+        .iter()
+        .rposition(|&byte| byte == b'\n')
+        .ok_or_else(|| Error::new("sign: missing signature"))?;
+    let signature = message.split_off(split + 1);
+    strip_trailing_lf(&mut message);
+    let signature =
+        std::str::from_utf8(&signature).map_err(|_| Error::new("sign: invalid signature"))?;
+    sign::verify_hex(&signed_payload(command, &message)?, signature, key).map_err(Error::new)?;
 
     Ok(message)
 }
 
-fn run_command(command: Command) -> Result<()> {
+/// Ciphers or deciphers `message` with the command's crypto system, returning the output bytes.
+fn run_system(command: &Command, message: Vec<u8>) -> Result<Vec<u8>> {
     match command.system {
-        CryptoSystem::Xor => run_xor(command),
-        CryptoSystem::Aes => run_aes(command),
-        CryptoSystem::X25519 => run_x25519(command),
-        CryptoSystem::Rsa => match command.mode {
-            Mode::Cipher | Mode::Decipher => run_rsa(command),
-            Mode::Generate { p, q } => print_rsa_keys(&rsa::generate(&p, &q).map_err(Error::new)?),
-            Mode::GenerateRandom { bits } => {
-                print_rsa_keys(&rsa::generate_random(bits).map_err(Error::new)?)
-            }
-        },
-        CryptoSystem::PgpXor => match command.mode {
-            Mode::Cipher | Mode::Decipher => {
-                run_pgp(command, true, pgp::cipher_xor, pgp::decipher_xor)
-            }
-            Mode::Generate { .. } | Mode::GenerateRandom { .. } => {
-                Err(Error::new("crypto system is not implemented"))
-            }
-        },
-        CryptoSystem::PgpAes => match command.mode {
-            Mode::Cipher | Mode::Decipher => {
-                let block = command.block;
-                run_pgp(command, block, pgp::cipher_aes, pgp::decipher_aes)
-            }
-            Mode::Generate { .. } | Mode::GenerateRandom { .. } => {
-                Err(Error::new("crypto system is not implemented"))
-            }
-        },
+        CryptoSystem::Xor => run_xor(command, message),
+        CryptoSystem::Aes => run_aes(command, message),
+        CryptoSystem::X25519 => run_x25519(command, message),
+        CryptoSystem::Rsa => run_rsa(command, message),
+        CryptoSystem::PgpXor => run_pgp(command, message, true, pgp::cipher_xor, pgp::decipher_xor),
+        CryptoSystem::PgpAes => run_pgp(
+            command,
+            message,
+            command.block,
+            pgp::cipher_aes,
+            pgp::decipher_aes,
+        ),
+    }
+}
+
+fn run_command(command: Command) -> Result<()> {
+    match &command.mode {
+        Mode::Generate { p, q } => print_rsa_keys(&rsa::generate(p, q).map_err(Error::new)?),
+        Mode::GenerateRandom { bits } => {
+            print_rsa_keys(&rsa::generate_random(*bits).map_err(Error::new)?)
+        }
+        Mode::Cipher | Mode::Decipher => {
+            let message = read_message()?;
+            let output = match (&command.mode, command.sign_key.as_deref()) {
+                (Mode::Cipher, Some(key)) => sign_output(run_system(&command, message)?, key)?,
+                (_, Some(key)) => run_system(&command, verify_input(&command, message, key)?)?,
+                (_, None) => run_system(&command, message)?,
+            };
+            write_output(&output)
+        }
     }
 }
 

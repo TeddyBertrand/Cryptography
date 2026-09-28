@@ -7,7 +7,10 @@ pub const DECIPHER: &str = "decipher";
 pub const GENERATE: &str = "generate";
 pub const BITS: &str = "bits";
 pub const BLOCK: &str = "block";
+pub const PADDING: &str = "padding";
+pub const SIGN: &str = "sign";
 pub const KEY: &str = "key";
+pub const SIGN_KEY: &str = "sign_key";
 
 pub fn parser() -> Parser {
     Parser::new("./my_pgp")
@@ -73,9 +76,28 @@ pub fn parser() -> Parser {
             ),
         )
         .arg(
+            Arg::flag(PADDING, "-p")
+                .section("OPTIONS")
+                .hidden(true)
+                .help("for RSA and PGP, pad the RSA input with OAEP (SHA-256/MGF1)"),
+        )
+        .arg(
+            Arg::flag(SIGN, "-s")
+                .section("OPTIONS")
+                .hidden(true)
+                .help("sign the ciphered MESSAGE with sign_key, or verify it when deciphering"),
+        )
+        .arg(
             Arg::positional(KEY, "key")
                 .conflicts_with(GENERATE)
                 .conflicts_with(BITS)
                 .help("Key used to cipher/decipher MESSAGE (incompatible with -g MODE)"),
+        )
+        .arg(
+            Arg::positional(SIGN_KEY, "sign_key")
+                .conflicts_with(GENERATE)
+                .conflicts_with(BITS)
+                .hidden(true)
+                .help("RSA key used to sign (private) or verify (public) the ciphered MESSAGE"),
         )
 }

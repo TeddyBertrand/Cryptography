@@ -130,6 +130,25 @@ daemon through the mounted `/var/run/docker.sock`; set `DOCKER_GID` in
 agent workspace lives in the `rust_agent_workspace` volume so docker-workflow
 can share it with the grading container via `--volumes-from`.
 
+## Nightly benchmarks and stress tests
+
+`cryptography-nightly` runs `ci/jenkins/jenkinsfiles/cryptography-nightly.Jenkinsfile`
+on `dev` every night (cron `H 3 * * *`, set in `seed-job.yaml`), work too
+slow for every push:
+
+- **Benchmark:** `cargo run --release --bin bench 10` (see `bench/`), whose
+  CSV is archived as `target/bench/bench.csv` on each build.
+- **Plot:** the per-benchmark medians are split by unit (MB/s, ops/s, ms)
+  and drawn by the Plot plugin (`plot` in `plugins.txt`). The trend graphs
+  are on the job page under **Plots**, group *Benchmarks*; their history
+  lives in the job directory, so it outlives the 30 kept builds.
+- **Stress tests:** `cargo test --workspace --release -- --include-ignored`,
+  the release suite including the ignored `bigint`/`prime` timing checks.
+
+Benchmarks run on the shared `rust-agent`, so numbers drift with whatever
+else the host is doing — read the trend, not single points. To run it
+without waiting for the night: **cryptography-nightly > Build Now**.
+
 ## Running the tests
 
 Two tiers, under `ci/jenkins/tests/`:
@@ -137,9 +156,10 @@ Two tiers, under `ci/jenkins/tests/`:
 - **Basic** (`tests/basic/`): the JCasC yaml is well-formed, the controller
   boots healthy with no CasC load errors, and the configured security realm
   and plugin set are actually live.
-- **Project** (`tests/project/`): the `cryptography-dev` and
-  `cryptography-main` seed jobs exist and are buildable, the Jenkinsfile
-  they share passes Jenkins' built-in Declarative Pipeline validator, both
+- **Project** (`tests/project/`): the `cryptography-dev`,
+  `cryptography-main` and `cryptography-nightly` seed jobs exist and are
+  buildable, the nightly one has its cron trigger, every Jenkinsfile passes
+  Jenkins' built-in Declarative Pipeline validator, the dev/main
   jobs have a `githubPush` trigger configured, and the
   `github-status-token` credential is present. A real end-to-end webhook
   delivery and status check can't be scripted here (needs a live smee.io
