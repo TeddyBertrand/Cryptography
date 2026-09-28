@@ -35,6 +35,21 @@ jobs:
       - name: Clippy
         run: nix develop -c cargo clippy --workspace -- -D warnings
 
+  epitest-dump:
+    runs-on: ubuntu-latest
+    container: epitechcontent/epitest-docker:latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build (make re)
+        run: make re
+
+      - name: Delivery check
+        run: ./my_pgp -h
+
+      - name: Functional suite
+        run: cargo test --workspace
+
   # Opt-in for cross-platform / sanitizer coverage once the project actually
   # needs it -- off by default to keep CI fast for solo use. These are sibling
   # jobs, not steps of build-test-lint above.
