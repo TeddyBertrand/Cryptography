@@ -2,7 +2,7 @@ use bigint::BigUint;
 use random::Rng;
 use rsa::KeyPair;
 
-use crate::prng::{without_trailing_zeros, Prng, CASES};
+use crate::prng::{cases, without_trailing_zeros, Prng};
 
 /// Modulus sizes of the RSA key pool; primes are the slow part, so cases share a pool.
 const RSA_KEY_BITS: [usize; 4] = [64, 128, 256, 512];
@@ -70,7 +70,7 @@ fn rsa_roundtrips() {
     let mut prng = Prng::from_env("rsa_roundtrips");
     let keys = key_pool(&mut prng, &RSA_KEY_BITS);
 
-    for case in 0..CASES {
+    for case in 0..cases() {
         let key = &keys[prng.below(keys.len())];
         // Strictly fewer bytes than the modulus has, so the message is always below `n`.
         let message = prng.message(1, (key.n.bits() - 1) / 8);
@@ -92,7 +92,7 @@ fn rsa_oaep_roundtrips() {
     let mut prng = Prng::from_env("rsa_oaep_roundtrips");
     let keys = key_pool(&mut prng, &OAEP_KEY_BITS);
 
-    for case in 0..CASES {
+    for case in 0..cases() {
         let key = &keys[prng.below(keys.len())];
         let max_len = key.n.bits().div_ceil(8) - padding::oaep::MIN_BLOCK_SIZE;
         // OAEP keeps the exact length: trailing zeros and empty messages roundtrip too.
@@ -116,7 +116,7 @@ fn sign_roundtrips() {
     let mut prng = Prng::from_env("sign_roundtrips");
     let keys = key_pool(&mut prng, &SIGN_KEY_BITS);
 
-    for case in 0..CASES {
+    for case in 0..cases() {
         let key = &keys[prng.below(keys.len())];
         let len = prng.below(MAX_MESSAGE_LEN + 1);
         let message = prng.bytes(len);
@@ -181,7 +181,7 @@ fn pgp_roundtrips(
     let mut prng = Prng::from_env(property);
     let keys = key_pool(&mut prng, &PGP_KEY_BITS);
 
-    for case in 0..CASES {
+    for case in 0..cases() {
         let rsa_key = &keys[prng.below(keys.len())];
         let key_len = key_len(&mut prng);
         let mut key_bytes = prng.bytes(key_len);
