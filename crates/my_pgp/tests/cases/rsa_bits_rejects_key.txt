@@ -1,0 +1,11 @@
+== ARGS ==
+rsa
+--bits
+64
+0101-19bb
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+'key' cannot be used with '--bits N'
+== EXIT ==
+84
