@@ -1,6 +1,6 @@
 use std::{
     io::{self, Read, Write},
-    process,
+    panic, process,
 };
 
 use aes::Aes;
@@ -157,11 +157,11 @@ type PgpCipher =
 type PgpDecipher = fn(&str, bool, rsa::Padding, &str) -> std::result::Result<Vec<u8>, String>;
 
 /// Shared `pgp-*` plumbing: the symmetric layer is picked by the `cipher`/`decipher` pair.
-/// `strip_lf` mirrors how the matching plain symmetric system reads its message.
+/// As with plain `xor` and `aes`, block mode drops the message's trailing line feed and
+/// stream mode keeps it as data.
 fn run_pgp(
     command: &Command,
     mut message: Vec<u8>,
-    strip_lf: bool,
     cipher: PgpCipher,
     decipher: PgpDecipher,
 ) -> Result<Vec<u8>> {
@@ -170,7 +170,7 @@ fn run_pgp(
         .key
         .as_deref()
         .ok_or_else(|| Error::new("missing key"))?;
-    if strip_lf {
+    if command.block {
         strip_trailing_lf(&mut message);
     }
 
@@ -185,7 +185,7 @@ fn run_pgp(
                 .map_err(|_| Error::new("ciphertext must be UTF-8 hexadecimal text"))?;
             let plaintext =
                 decipher(ciphertext_hex, command.block, padding, key).map_err(Error::new)?;
-            Ok(if strip_lf {
+            Ok(if command.block {
                 with_trailing_lf(plaintext)
             } else {
                 plaintext
@@ -295,14 +295,8 @@ fn run_system(command: &Command, message: Vec<u8>) -> Result<Vec<u8>> {
         CryptoSystem::Aes => run_aes(command, message),
         CryptoSystem::X25519 => run_x25519(command, message),
         CryptoSystem::Rsa => run_rsa(command, message),
-        CryptoSystem::PgpXor => run_pgp(command, message, true, pgp::cipher_xor, pgp::decipher_xor),
-        CryptoSystem::PgpAes => run_pgp(
-            command,
-            message,
-            command.block,
-            pgp::cipher_aes,
-            pgp::decipher_aes,
-        ),
+        CryptoSystem::PgpXor => run_pgp(command, message, pgp::cipher_xor, pgp::decipher_xor),
+        CryptoSystem::PgpAes => run_pgp(command, message, pgp::cipher_aes, pgp::decipher_aes),
     }
 }
 
@@ -330,8 +324,19 @@ fn run_command(command: Command) -> Result<()> {
     }
 }
 
+/// Command-line arguments. `std::env::args` would panic on one that isn't UTF-8.
+fn args() -> Result<Vec<String>> {
+    std::env::args_os()
+        .skip(1)
+        .map(|arg| {
+            arg.into_string()
+                .map_err(|_| Error::new("arguments must be valid UTF-8"))
+        })
+        .collect()
+}
+
 fn run() -> Result<()> {
-    match cli::parse(std::env::args().skip(1))? {
+    match cli::parse(args()?)? {
         Outcome::Usage(usage) => {
             println!("{usage}");
             Ok(())
@@ -341,8 +346,14 @@ fn run() -> Result<()> {
 }
 
 fn main() {
-    if let Err(err) = run() {
-        eprintln!("{err}");
-        process::exit(core::EXIT_CODE);
+    match panic::catch_unwind(run) {
+        Ok(Ok(())) => {}
+        Ok(Err(err)) => {
+            eprintln!("{err}");
+            process::exit(core::EXIT_CODE);
+        }
+        // A panic is a bug, already reported on stderr by the panic hook: still exit 84,
+        // as the subject asks for any error, instead of Rust's 101.
+        Err(_) => process::exit(core::EXIT_CODE),
     }
 }
