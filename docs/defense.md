@@ -293,8 +293,12 @@ X25519 (RFC 7748) is Diffie-Hellman on Curve25519, the Montgomery curve
 - **Clamping**: before use, the scalar has its 3 low bits cleared (a multiple of the
   cofactor 8, so points of small order vanish), bit 255 cleared and bit 254 set (so every
   scalar has the same length and the ladder always runs the same number of steps).
-- **Keys**: the private key is 32 random bytes. The public key is `X25519(private, 9)`, where
-  9 is the `x`-coordinate of the base point.
+- **Keys** (`ed25519.rs`): like the subject's example, keys are an Ed25519 pair (RFC 8032).
+  The private key is a random 32-byte seed; its scalar is the first half of SHA-512(seed),
+  clamped. The public key is that scalar times the base point of the twisted Edwards curve
+  `-x² + y² = 1 + d·x²·y²`, encoded as `y` with the sign of `x`. Both curves are the same
+  group in different coordinates, so the X25519 public key is `u = (1 + y) / (1 - y)`, and
+  `X25519(scalar, 9)` gives the same `u` (9 is the Montgomery `u` of the base point).
 - **Shared secret**: `X25519(a, B) = X25519(b, A)`, since `a·(b·G) = b·(a·G)`.
 
 `my_pgp X25519 -c` turns this key exchange into encryption, like ECIES:
@@ -335,9 +339,6 @@ Limits:
 - **No forward secrecy against the recipient.** The ephemeral key protects nothing if the
   recipient's private key leaks later: every past message can be deciphered.
 - The private key is passed on the command line.
-- The subject's X25519 example uses an Ed25519 key pair. Ed25519 uses a twisted Edwards curve
-  and derives its scalar by hashing the private key, so those keys do not work as X25519 keys
-  directly (#130).
 - A quantum computer running Shor's algorithm would break X25519 and RSA alike.
 
 ## RSA-OAEP (bonus, `-p`)
