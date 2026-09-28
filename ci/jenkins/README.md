@@ -110,11 +110,25 @@ this config can set.
 
 ## Build notifications
 
-`cryptography.Jenkinsfile` posts to a Discord channel when a
-`cryptography-dev`/`cryptography-main` build fails (`post { failure }`) and
-when the next one turns green again (`post { fixed }`), so a red build is
-seen without watching the UI. Posting is best-effort: a Discord outage or a
-bad URL never changes the build result.
+Every build posts a report to a Discord channel, as an embed colored by
+result (green, yellow for unstable, red) and linking to the build:
+
+- `cryptography-dev`/`cryptography-main`: commit, tests passed/failed/skipped
+  (from the `junit` step), line coverage (from `cobertura.xml`) and duration.
+- `cryptography-nightly`: every benchmark median next to its personal best,
+  `NEW PB` / `REGRESSION -N%` flags, the stress test result and duration.
+
+Both Jenkinsfiles `load` the shared `jenkinsfiles/discord.groovy` helper from
+the workspace in `post { always }`. Posting is best-effort: a Discord outage
+or a bad URL never changes the build result.
+
+Personal bests are tracked by `scripts/bench-records.sh`: `ms` is
+lower-is-better, `MB/s` and `ops/s` higher-is-better, and a median more than
+`BENCH_REGRESSION_PCT` percent (default 10) worse than its best is flagged.
+Records live in `/home/jenkins/agent/bench-records/` on the agent, inside
+the persistent `rust_agent_workspace` volume, so they survive `cleanWs` and
+restarts; the first nightly run marks everything `first run`. Delete the
+file to reset them (`docker compose down -v` also wipes them).
 
 One manual step: in the Discord channel, **Edit Channel > Integrations >
 Webhooks > New Webhook**, copy its URL into `ci/jenkins/.env` as
@@ -124,7 +138,7 @@ Webhooks > New Webhook**, copy its URL into `ci/jenkins/.env` as
 ```
 docker compose -f ci/jenkins/docker-compose.yml up -d jenkins
 ```
-Left empty, the notification step is skipped.
+Left empty, the report is skipped.
 
 ## Build status badge
 
