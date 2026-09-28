@@ -71,7 +71,12 @@ pipeline {
         }
         stage('Epitech dump check') {
             agent {
-                docker { image 'epitechcontent/epitest-docker' }
+                // reuseNode: rust-agent has a single executor, a second
+                // node allocation would wait on the one this build holds.
+                docker {
+                    image 'epitechcontent/epitest-docker'
+                    reuseNode true
+                }
             }
             steps {
                 sh '''
