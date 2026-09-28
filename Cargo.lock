@@ -61,11 +61,14 @@ name = "my_pgp"
 version = "0.1.0"
 dependencies = [
  "aes",
+ "bigint",
  "cli",
  "core",
  "encoding",
  "padding",
  "pgp",
+ "prime",
+ "random",
  "rsa",
  "sign",
  "x25519",
