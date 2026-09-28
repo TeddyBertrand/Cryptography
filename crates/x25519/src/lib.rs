@@ -1,3 +1,4 @@
+pub mod ed25519;
 pub mod field;
 
 mod ladder;
@@ -17,17 +18,21 @@ const BASEPOINT: [u8; 32] = [
     9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 ];
 
+/// Raw X25519 public key (`u`) of a scalar: the ciphertext's ephemeral keys use it.
 pub fn public_key(private_key: [u8; 32]) -> [u8; 32] {
     x25519(private_key, BASEPOINT)
 }
 
+/// `(public key, private key)` in Ed25519 form (RFC 8032): a random seed and its public key,
+/// the same form as the subject's example pair.
 pub fn generate_key_pair() -> Result<([u8; 32], [u8; 32]), String> {
-    let private_key = random_bytes::<32>()?;
-    Ok((public_key(private_key), private_key))
+    let seed = random_bytes::<32>()?;
+    Ok((ed25519::public_key(seed), seed))
 }
 
+/// Ciphers `plaintext` for an Ed25519 public key, converted to its X25519 form.
 pub fn cipher(plaintext: &[u8], recipient_public_key: &str) -> Result<Vec<u8>, String> {
-    let recipient_public_key = parse_key(recipient_public_key)?;
+    let recipient_public_key = ed25519::to_montgomery(parse_key(recipient_public_key)?);
     let ephemeral_private_key = random_bytes::<32>()?;
     let nonce = random_bytes::<NONCE_SIZE>()?;
 
@@ -45,8 +50,9 @@ pub fn cipher(plaintext: &[u8], recipient_public_key: &str) -> Result<Vec<u8>, S
     Ok(ciphertext)
 }
 
+/// Deciphers with an Ed25519 seed, converted to its X25519 scalar.
 pub fn decipher(ciphertext: &[u8], recipient_private_key: &str) -> Result<Vec<u8>, String> {
-    let recipient_private_key = parse_key(recipient_private_key)?;
+    let recipient_private_key = ed25519::scalar(parse_key(recipient_private_key)?);
     if ciphertext.len() < EPHEMERAL_KEY_SIZE + NONCE_SIZE + TAG_SIZE {
         return Err("X25519 ciphertext is too short".to_string());
     }
@@ -147,9 +153,10 @@ fn constant_time_eq(left: &[u8], right: &[u8]) -> bool {
 mod tests {
     use super::*;
 
-    const ALICE_PRIVATE: &str = "77076d0a7318a57d3c16c17251b26645df4c2f87ebc0992ab177fba51db92c2a";
-    const ALICE_PUBLIC: &str = "8520f0098930a754748b7ddcb43ef75a0dbf3a0d26381af4eba4a98eaa9b4e6a";
-    const BOB_PRIVATE: &str = "5dab087e624a8a4b79e17f8b83800ee66f3bb1292618b6fd1c2f8b27ff88e0eb";
+    // RFC 8032 test 1 (the subject's X25519 example pair) and test 2's seed.
+    const ALICE_PRIVATE: &str = "9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60";
+    const ALICE_PUBLIC: &str = "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a";
+    const BOB_PRIVATE: &str = "4ccd089b28ff96da9db6c346ec114e0f5b8a319f35aba624da8cf6ed4fb8a6fb";
 
     #[test]
     fn hybrid_cipher_roundtrips_binary_and_rejects_a_wrong_key() {
@@ -175,9 +182,15 @@ mod tests {
     }
 
     #[test]
-    fn generated_private_key_matches_its_public_key() {
+    fn generated_key_pair_is_an_ed25519_pair_that_roundtrips() {
         let (public, private) = generate_key_pair().unwrap();
-        assert_eq!(public_key(private), public);
+        assert_eq!(ed25519::public_key(private), public);
+
+        let ciphertext = cipher(b"message", &encoding::hex::encode(&public)).unwrap();
+        assert_eq!(
+            decipher(&ciphertext, &encoding::hex::encode(&private)),
+            Ok(b"message".to_vec())
+        );
     }
 
     #[test]
