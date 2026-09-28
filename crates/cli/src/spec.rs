@@ -7,6 +7,7 @@ pub const DECIPHER: &str = "decipher";
 pub const GENERATE: &str = "generate";
 pub const BITS: &str = "bits";
 pub const BLOCK: &str = "block";
+pub const PADDING: &str = "padding";
 pub const KEY: &str = "key";
 
 pub fn parser() -> Parser {
@@ -70,6 +71,12 @@ pub fn parser() -> Parser {
                 "for XOR, AES and PGP, only works on one block. The MESSAGE and the symmetric\n\
                  key must be the same size",
             ),
+        )
+        .arg(
+            Arg::flag(PADDING, "-p")
+                .section("OPTIONS")
+                .hidden(true)
+                .help("for RSA and PGP, pad the RSA input with OAEP (SHA-256/MGF1)"),
         )
         .arg(
             Arg::positional(KEY, "key")

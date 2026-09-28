@@ -8,6 +8,8 @@ use crate::prng::{without_trailing_zeros, Prng, CASES};
 const RSA_KEY_BITS: [usize; 4] = [64, 128, 256, 512];
 /// PGP moduli must exceed the largest symmetric key (32 bytes) ciphered under them.
 const PGP_KEY_BITS: [usize; 2] = [320, 512];
+/// OAEP-SHA256 needs at least a 66-byte modulus; these fit 6 and 30-byte messages.
+const OAEP_KEY_BITS: [usize; 2] = [576, 768];
 const MAX_MESSAGE_LEN: usize = 256;
 const MAX_XOR_KEY_LEN: usize = 32;
 const AES_KEY_LENS: [usize; 3] = [16, 24, 32];
@@ -83,10 +85,35 @@ fn rsa_roundtrips() {
     }
 }
 
-/// `pgp::cipher_xor` / `pgp::cipher_aes`: `(message, block, key)` to `(ciphered_key, ciphertext)`.
-type PgpCipher = fn(&[u8], bool, &str) -> Result<(String, String), String>;
-/// `pgp::decipher_xor` / `pgp::decipher_aes`: `(ciphertext, block, key)` to the message.
-type PgpDecipher = fn(&str, bool, &str) -> Result<Vec<u8>, String>;
+#[test]
+fn rsa_oaep_roundtrips() {
+    let mut prng = Prng::from_env("rsa_oaep_roundtrips");
+    let keys = key_pool(&mut prng, &OAEP_KEY_BITS);
+
+    for case in 0..CASES {
+        let key = &keys[prng.below(keys.len())];
+        let max_len = key.n.bits().div_ceil(8) - padding::oaep::MIN_BLOCK_SIZE;
+        // OAEP keeps the exact length: trailing zeros and empty messages roundtrip too.
+        let len = prng.below(max_len + 1);
+        let message = prng.bytes(len);
+
+        let ciphertext = rsa::cipher_oaep(&message, &key.e, &key.n).unwrap();
+        let plaintext = rsa::decipher_oaep(&ciphertext, &key.d, &key.n).unwrap();
+
+        assert_eq!(
+            plaintext,
+            message,
+            "case {case}: key {}, message {message:02x?}",
+            key.public_key()
+        );
+    }
+}
+
+/// `pgp::cipher_xor` / `pgp::cipher_aes`: `(message, block, padding, key)` to
+/// `(ciphered_key, ciphertext)`.
+type PgpCipher = fn(&[u8], bool, rsa::Padding, &str) -> Result<(String, String), String>;
+/// `pgp::decipher_xor` / `pgp::decipher_aes`: `(ciphertext, block, padding, key)` to the message.
+type PgpDecipher = fn(&str, bool, rsa::Padding, &str) -> Result<Vec<u8>, String>;
 
 /// Runs `CASES` pgp roundtrips: `key_len` picks the symmetric key size and `message` the
 /// message for that key size. Stream modes lose trailing zeros to padding, block modes don't.
@@ -117,12 +144,14 @@ fn pgp_roundtrips(
         let (ciphered_key, ciphertext) = cipher(
             &message,
             block,
+            rsa::Padding::None,
             &format!("{symmetric_key}:{}", rsa_key.public_key()),
         )
         .unwrap_or_else(|err| panic!("{context}: cipher failed: {err}"));
         let plaintext = decipher(
             &ciphertext,
             block,
+            rsa::Padding::None,
             &format!("{ciphered_key}:{}", rsa_key.private_key()),
         )
         .unwrap_or_else(|err| panic!("{context}: decipher failed: {err}"));

@@ -39,6 +39,8 @@ pub struct Command {
     pub system: CryptoSystem,
     pub mode: Mode,
     pub block: bool,
+    /// RSA-OAEP padding on the RSA step (`-p`, bonus).
+    pub padding: bool,
     pub key: Option<String>,
 }
 

@@ -9,5 +9,6 @@ workspace = true
 [dependencies]
 bigint = { path = "../bigint" }
 encoding = { path = "../encoding" }
+padding = { path = "../padding" }
 prime = { path = "../prime" }
 random = { path = "../random" }
