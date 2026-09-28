@@ -18,6 +18,29 @@ def notifyGitHub(String status, String description) {
     }
 }
 
+// Best-effort like notifyGitHub. An empty webhook URL (DISCORD_WEBHOOK_URL
+// unset in .env) skips silently. The message goes through the environment
+// and the secret through withCredentials, so neither is Groovy-interpolated
+// into the shell script.
+def notifyDiscord(String message) {
+    try {
+        withCredentials([string(credentialsId: 'discord-webhook-url', variable: 'DISCORD_WEBHOOK_URL')]) {
+            withEnv(["DISCORD_MESSAGE=${message}"]) {
+                sh '''
+                    if [ -z "$DISCORD_WEBHOOK_URL" ]; then
+                        echo "Discord webhook not configured, skipping"
+                        exit 0
+                    fi
+                    printf '{"content":"%s"}' "$DISCORD_MESSAGE" |
+                        curl -sSf -H 'Content-Type: application/json' -d @- "$DISCORD_WEBHOOK_URL"
+                '''
+            }
+        }
+    } catch (err) {
+        echo "Discord notification not sent: ${err.message}"
+    }
+}
+
 pipeline {
     agent { label 'rust-agent' }
 
@@ -115,6 +138,10 @@ pipeline {
         }
         failure {
             notifyGitHub('FAILURE', 'Build failed')
+            notifyDiscord(":red_circle: ${env.JOB_NAME} #${env.BUILD_NUMBER} failed: ${env.BUILD_URL}")
+        }
+        fixed {
+            notifyDiscord(":green_circle: ${env.JOB_NAME} #${env.BUILD_NUMBER} is back to green: ${env.BUILD_URL}")
         }
         always {
             cleanWs()
