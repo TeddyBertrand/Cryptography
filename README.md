@@ -43,7 +43,7 @@ Without `-b`, the symmetric systems work in stream mode: the message can be of a
 A few conventions apply to every system:
 
 - Keys, primes and ciphertexts are hexadecimal numbers in little endian: the least significant byte comes first. The RSA modulus `19bb` is `0xbb19`.
-- One trailing line feed is dropped from the input, and the output ends with one, so `echo` works as expected.
+- Ciphering prints hexadecimal lines, each ending with a line feed. In block mode (`-b`) and with RSA, one trailing line feed is dropped from the message and deciphering prints one back, so `echo` works as expected. In stream mode and with X25519, the whole input is the message, line feeds included, and deciphering gives it back as is (stream mode loses trailing zero bytes, see [XOR](#xor)).
 - Any error prints a message on standard error and exits with code 84.
 
 ### XOR
