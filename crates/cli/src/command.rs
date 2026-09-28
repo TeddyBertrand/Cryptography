@@ -42,6 +42,8 @@ pub struct Command {
     /// RSA-OAEP padding on the RSA step (`-p`, bonus).
     pub padding: bool,
     pub key: Option<String>,
+    /// RSA key signing (`-c`) or verifying (`-d`) the ciphered message (`-s`, bonus).
+    pub sign_key: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
