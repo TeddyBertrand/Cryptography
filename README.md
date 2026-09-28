@@ -2,6 +2,8 @@
 
 `my_pgp` ciphers and deciphers messages with XOR, AES, RSA, X25519 and the PGP-style hybrids `pgp-xor` and `pgp-aes`. It is the Epitech G-CNA-500 project (subject: [G-CNA-500-my_pgp.pdf](G-CNA-500-my_pgp.pdf)), written in Rust with the standard library only: see [No external crates](#no-external-crates).
 
+[docs/defense.md](docs/defense.md) explains how each cryptosystem works and why it is secure or not.
+
 ## Build
 
 You need a recent stable Rust toolchain (1.88 or later) and `make`. With Nix, `nix develop` opens a shell with the toolchain, `clippy`, `rustfmt` and `gh`.

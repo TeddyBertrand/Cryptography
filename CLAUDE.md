@@ -59,37 +59,41 @@ Cargo workspace, std-only (no external crates — everything by hand). Each crat
 Leaves (no internal deps):
 - `crates/core` — `Cipher` trait, shared error type (exit-84 semantics), `Bytes`/`Number` newtypes. #19
 - `crates/encoding` — little-endian hex <-> bytes conversion. #22
-- `crates/bigint` — arbitrary-precision `BigUint`: storage/parsing/cmp, add/sub/mul, div, modpow/gcd/lcm/inv. #10, #32-35, #50
 - `crates/random` — CSPRNG seeded from `/dev/urandom` (bonus). #47
 - `crates/argparse` — generic, project-agnostic clap-lite: `Arg`/`Group` builders, `Parser` -> `Matches`, help generated from arg metadata + `Layout`. Reusable outside my_pgp; never put my_pgp knowledge here. #20
 
-Depend on the above:
-- `crates/cli` (-> argparse, core) — my_pgp argument spec (one `Arg` per flag, description = subject text) + project rules (`-g` rsa-only, key required unless `-g`) -> `Command`. New flag = new `Arg` in `spec.rs`. #20
+Building blocks:
+- `crates/bigint` (-> encoding) — arbitrary-precision `BigUint`: storage/parsing/cmp, add/sub/mul, div, Montgomery modpow/gcd/lcm/inv. `modpow` is constant-time (secret exponents); `modpow_vartime` only for public exponents. #10, #32-35, #50
+- `crates/hash` (-> encoding) — SHA-256 + HMAC-SHA256 (bonus). #54
 - `crates/prime` (-> bigint, random) — Miller-Rabin + random prime generation (bonus). #48
-- `crates/xor` (-> core, encoding) — XOR block/stream cipher. #9, #25, #26
-- `crates/aes` (-> core, encoding) — AES-128/192/256 key expansion + block/stream cipher. #9, #27-30, #46
 - `crates/padding` (-> hash, random) — RSA-OAEP encode/decode on big-endian blocks, MGF1-SHA256 (bonus). #58
-- `crates/rsa` (-> bigint, encoding, padding, prime, random) — RSA keygen (Carmichael, Fermat e), cipher/decipher (textbook or OAEP via `Padding`), keygen from random primes. #11, #38-40, #49
-- `crates/hash` (-> encoding) — SHA-256 (bonus). #54
-- `crates/x25519` (-> encoding, random) — 2nd asymmetric system: GF(2^255-19), Montgomery ladder (bonus). #13, #55-57
+- `crates/cli` (-> argparse, core) — my_pgp argument spec (one `Arg` per flag, description = subject text) + project rules (`-g P Q` rsa-only, bare `-g` X25519-only, `--bits` rsa-only, `-p` rsa/pgp-only, key required unless `-g`) -> `Command`. New flag = new `Arg` in `spec.rs`. #20
 
-Depend on those:
-- `crates/pgp` (-> rsa, xor, aes) — `pgp-xor` / `pgp-aes` hybrid modes. #12, #41, #42
+Cryptosystems:
+- `crates/xor` (-> core, encoding) — XOR block/stream cipher. #9, #25, #26
+- `crates/aes` (-> core, encoding) — AES-128/192/256 key expansion + block/stream (ECB, zero padding) cipher. #9, #27-30, #46
+- `crates/rsa` (-> bigint, encoding, padding, prime, random) — RSA keygen (Carmichael, Fermat e), cipher/decipher (textbook or OAEP via `Padding`), keygen from random primes. #11, #38-40, #49
+- `crates/x25519` (-> aes, core, encoding, hash, random) — 2nd asymmetric system: GF(2^255-19), Montgomery ladder, key pair generation, hybrid encryption (ephemeral ECDH + HKDF-SHA256 + AES-256-CTR + HMAC-SHA256) (bonus). #13, #55-57
+- `crates/pgp` (-> core, encoding, rsa, xor, aes) — `pgp-xor` / `pgp-aes` hybrid modes. #12, #41, #42
 - `crates/sign` (-> bigint, rsa, hash) — RSASSA-PKCS1-v1_5 SHA-256 sign/verify, `-s` flag (bonus). #59
 
 Binary:
 - `crates/my_pgp` (-> core, cli, encoding, xor, aes, rsa, pgp, x25519, sign, padding) — calls `cli::parse`, stdin/stdout, dispatch, error -> exit 84. #8, #21, #23
 
 Standalone:
-- `bench/` (-> bigint, rsa, aes) — std-only benchmark binary (bonus). #51
+- `bench/` (-> core, random, prime, xor, rsa, aes, bigint, x25519) — std-only binaries (bonus): `bench` (throughput/ops, CSV) and `timing` (dudect-style constant-time check, Welch t-test). #51
+
+Docs:
+- `docs/defense.md` — per-cryptosystem "how it works / why it is (in)secure" notes for the defense. Update when a system's behavior changes.
+- `docs/constant-time-audit.md` — timing audit, `timing` harness method and results, accepted leaks.
 
 ## Commands
 
-Dev shell via `flake.nix` — CI runs everything as `nix develop -c <cmd>`.
+Dev shell via `flake.nix` — CI's `build-test-lint` and `retrocompat` jobs run as `nix develop -c <cmd>`; `epitest-dump` runs `make re` and the test suites in the Epitech grading image, without Nix.
 
 - Build binary to repo root: `make` (`cargo build --release` + copy `my_pgp`); `make re`, `make fclean`
 - Test all: `cargo test --workspace`
-- Single crate / single test: `cargo test -p rsa`, `cargo test -p rsa generates_key_pair_matching_issue_example`
+- Single crate / single test: `cargo test -p rsa`, `cargo test -p rsa matches_subject_ciphertext_for_wf`
 - Release-only checks (bigint/prime timing, 1024-bit RSA roundtrip budget): `cargo test --workspace --release -- --include-ignored`
 - Lint: `cargo clippy --workspace --all-targets -- -D warnings` — pre-commit hook and CI omit `--all-targets`, so lint in `#[cfg(test)]` code slips through them; run it yourself
 - Format check: `cargo fmt --all -- --check`
@@ -98,15 +102,15 @@ Dev shell via `flake.nix` — CI runs everything as `nix develop -c <cmd>`.
 ## Testing layout
 
 - Unit tests inline (`#[cfg(test)] mod tests`) in each crate.
-- `crates/my_pgp/tests/functional.rs` — data-driven: each `tests/cases/*.txt` (`== ARGS ==`, `== STDIN ==`, `== STDOUT ==`, `== STDERR ==`, `== EXIT ==` sections) runs the real binary. New CLI case = new `.txt`, no Rust.
+- `crates/my_pgp/tests/functional.rs` — data-driven: each `tests/cases/*.txt` (`== ARGS ==`, `== STDIN ==`, `== STDOUT ==`, `== STDERR ==`, `== EXIT ==` sections) runs the real binary; `== THEN ==` pipes stdout into a second run (randomized ciphers), `== SKIP ==` disables a case with a reason. New CLI case = new `.txt`, no Rust.
 - `crates/my_pgp/tests/roundtrip/` — property tests, 1000 cases each, SplitMix64 PRNG. Failing run prints seed; replay with `PROPERTY_SEED=0x...`.
 - `tests/*.sh` — subject PDF examples piped through `cargo run -p my_pgp`.
 
 ## Behavior notes
 
 - Any error → message on stderr, exit `core::EXIT_CODE` (84).
-- Bonus flags (e.g. `rsa --bits N`) stay out of `-h` so help matches the subject byte-for-byte (`tests/cases/help.txt`). Document bonuses in README instead.
-- `x25519` is an empty stub; `my_pgp` already depends on it.
+- Bonus flags (e.g. `rsa --bits N`) stay out of `-h` so help matches the subject's, whose only addition is the `X25519` line (`tests/cases/help.txt`). Document bonuses in README instead.
+- `X25519 -g` prints a random key pair; `-c <public>` / `-d <private>` output/input hex `ephemeral_public || nonce || ciphertext || tag`, tag checked before deciphering. The subject's X25519 example keys are an Ed25519 pair and don't round-trip yet (#130, skipped case `subject_x25519_roundtrips.txt`).
 - `-s` takes an extra hidden `sign_key` positional (signer `d-n` on `-c`, verifier `e-n` on `-d`); signature is appended as the last output line and covers the ciphered output as printed (both lines for `pgp-*`).
 
 ## Enforcement
