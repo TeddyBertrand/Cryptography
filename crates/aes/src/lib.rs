@@ -44,6 +44,14 @@ impl Aes {
     }
 }
 
+/// Reverses each 32-bit word in place: converts between the subject's little-endian hex
+/// numbers (keys, ciphertexts) and the byte order the AES state expects.
+pub fn reverse_words(bytes: &mut [u8]) {
+    for word in bytes.as_chunks_mut::<4>().0 {
+        word.reverse();
+    }
+}
+
 impl Cipher for Aes {
     fn cipher(&self, plaintext: &Bytes) -> Result<Bytes> {
         let mut padded = plaintext.to_vec();

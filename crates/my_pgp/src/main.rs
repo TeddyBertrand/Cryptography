@@ -54,7 +54,7 @@ fn run_xor(command: Command) -> Result<()> {
 fn run_aes(command: Command) -> Result<()> {
     let key = command.key.ok_or_else(|| Error::new("missing key"))?;
     let mut key = hex::decode(&key).map_err(Error::new)?;
-    reverse_aes_words(&mut key);
+    aes::reverse_words(&mut key);
     let cipher = Aes::get_aes_key(Bytes::new(key))?;
     let message = read_message(command.block)?;
     let encrypting = matches!(&command.mode, Mode::Cipher);
@@ -66,7 +66,7 @@ fn run_aes(command: Command) -> Result<()> {
             let encoded = std::str::from_utf8(&message)
                 .map_err(|_| Error::new("ciphertext must be UTF-8 hexadecimal text"))?;
             let mut ciphertext = hex::decode(encoded).map_err(Error::new)?;
-            reverse_aes_words(&mut ciphertext);
+            aes::reverse_words(&mut ciphertext);
             let ciphertext = Bytes::new(ciphertext);
 
             if command.block {
@@ -81,7 +81,7 @@ fn run_aes(command: Command) -> Result<()> {
     };
 
     if encrypting {
-        reverse_aes_words(&mut output);
+        aes::reverse_words(&mut output);
         io::stdout()
             .write_all(hex::encode(&output).as_bytes())
             .map_err(|err| Error::new(format!("failed to write standard output: {err}")))
@@ -89,12 +89,6 @@ fn run_aes(command: Command) -> Result<()> {
         io::stdout()
             .write_all(&output)
             .map_err(|err| Error::new(format!("failed to write standard output: {err}")))
-    }
-}
-
-fn reverse_aes_words(bytes: &mut [u8]) {
-    for word in bytes.as_chunks_mut::<4>().0 {
-        word.reverse();
     }
 }
 
