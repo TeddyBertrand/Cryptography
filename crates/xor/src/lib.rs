@@ -53,21 +53,25 @@ impl Xor {
         block.reverse();
     }
 
-    /// XORs `bytes` with the key, repeated over them.
-    fn xor_in_place(&self, bytes: &mut [u8]) {
-        for (byte, key) in bytes.iter_mut().zip(self.key.iter().cycle()) {
+    /// XORs a key-sized `block` with the key.
+    fn xor_in_place(&self, block: &mut [u8]) {
+        for (byte, key) in block.iter_mut().zip(self.key.iter()) {
             *byte ^= key;
         }
     }
 }
 
 impl Cipher for Xor {
+    /// Zero-pads the message to whole key-sized blocks and ciphers each one as `cipher_block`
+    /// does, so a one-block message gives the same output with or without `-b`.
     fn cipher(&self, plaintext: &Bytes) -> Result<Bytes> {
-        let mut padded = plaintext.to_vec();
-        padded.resize(padded.len().next_multiple_of(self.key.len()), 0);
-        self.xor_in_place(&mut padded);
+        let mut blocks = plaintext.to_vec();
+        blocks.resize(blocks.len().next_multiple_of(self.key.len()), 0);
+        for block in blocks.chunks_mut(self.key.len()) {
+            self.cipher_in_place(block);
+        }
 
-        Ok(Bytes::new(padded))
+        Ok(Bytes::new(blocks))
     }
 
     fn decipher(&self, ciphertext: &Bytes) -> Result<Bytes> {
@@ -78,7 +82,9 @@ impl Cipher for Xor {
         }
 
         let mut plaintext = ciphertext.to_vec();
-        self.xor_in_place(&mut plaintext);
+        for block in plaintext.chunks_mut(self.key.len()) {
+            self.decipher_in_place(block);
+        }
         while plaintext.last() == Some(&0) {
             plaintext.pop();
         }
@@ -100,12 +106,21 @@ mod tests {
     }
 
     #[test]
-    fn ciphers_and_deciphers_the_subject_block_example() {
+    fn stream_mode_ciphers_a_one_block_message_like_block_mode() {
         let cipher = Xor::new(Bytes::new(b"What is dead may never die".to_vec())).unwrap();
         let message = Bytes::new(b"You know nothing, Jon Snow".to_vec());
-        let ciphertext = Bytes::new(
-            b"\x0e\x07\x14TK\x07\x1cWD\x0b\x0e\x10H\x04\x0f\x1e\x0cN/\x19\x0bRs\n\x06\x12".to_vec(),
-        );
+        let ciphertext = cipher.cipher_block(&message).unwrap();
+
+        assert_eq!(cipher.cipher(&message).unwrap(), ciphertext);
+        assert_eq!(cipher.decipher(&ciphertext).unwrap(), message);
+    }
+
+    #[test]
+    fn stream_mode_pads_then_ciphers_each_block_reversed() {
+        let cipher = Xor::new(Bytes::new(vec![0x10, 0x20])).unwrap();
+        let message = Bytes::new(vec![0x01, 0x02, 0x03]);
+        // Blocks `01 02` and `03 00`, each reversed then XORed with `10 20`.
+        let ciphertext = Bytes::new(vec![0x12, 0x21, 0x10, 0x23]);
 
         assert_eq!(cipher.cipher(&message).unwrap(), ciphertext);
         assert_eq!(cipher.decipher(&ciphertext).unwrap(), message);

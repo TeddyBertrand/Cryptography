@@ -42,6 +42,22 @@ fn deciphers_the_subject_block_example() {
 }
 
 #[test]
+fn stream_mode_ciphers_the_subject_message_like_block_mode() {
+    let output = run(&["xor", "-c", KEY], b"You know nothing, Jon Snow");
+
+    assert!(output.status.success());
+    assert_eq!(output.stdout, [CIPHERTEXT, b"\n"].concat());
+}
+
+#[test]
+fn stream_mode_deciphers_the_subject_ciphertext_like_block_mode() {
+    let output = run(&["xor", "-d", KEY], &[CIPHERTEXT, b"\n"].concat());
+
+    assert!(output.status.success());
+    assert_eq!(output.stdout, b"You know nothing, Jon Snow");
+}
+
+#[test]
 fn rejects_a_block_size_mismatch_with_exit_84() {
     let output = run(&["xor", "-c", "-b", "5768"], b"x\n");
 
@@ -75,8 +91,9 @@ fn stream_mode_roundtrips_multiline_input_ending_in_a_newline() {
 fn stream_mode_pads_only_a_partial_final_block() {
     let encrypted = run(&["xor", "-c", "1020"], b"abc");
 
+    // Blocks `ab` and `c\0`, each reversed then XORed with the key, as in block mode.
     assert!(encrypted.status.success());
-    assert_eq!(encrypted.stdout, b"71427320\n");
+    assert_eq!(encrypted.stdout, b"72411043\n");
 
     let decrypted = run(&["xor", "-d", "1020"], &encrypted.stdout);
     assert!(decrypted.status.success());
