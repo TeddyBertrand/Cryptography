@@ -9,6 +9,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         build-essential \
         make \
         pkg-config \
+        docker-cli \
     && rm -rf /var/lib/apt/lists/*
 
 USER jenkins
