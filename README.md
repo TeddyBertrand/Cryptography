@@ -4,6 +4,16 @@ Cryptography
 
 These options are left out of `./my_pgp -h` so the help stays identical to the subject.
 
+### X25519 hybrid encryption
+
+```
+./my_pgp X25519 -g
+./my_pgp X25519 -c <recipient_public_key>
+./my_pgp X25519 -d <recipient_private_key>
+```
+
+`-g` prints a 32-byte X25519 public/private key pair as hexadecimal. Ciphering creates a fresh ephemeral key pair, derives AES-256-CTR and authentication keys with HKDF-SHA256, then emits hexadecimal `ephemeral_public_key || nonce || ciphertext || tag`. Deciphering verifies the HMAC-SHA256 tag before returning plaintext, so binary input round-trips exactly and a wrong private key or modified ciphertext exits 84.
+
 ### RSA keys from random primes
 
 ```
