@@ -149,6 +149,26 @@ type PgpCipher = fn(&[u8], bool, rsa::Padding, &str) -> Result<(String, String),
 /// `pgp::decipher_xor` / `pgp::decipher_aes`: `(ciphertext, block, padding, key)` to the message.
 type PgpDecipher = fn(&str, bool, rsa::Padding, &str) -> Result<Vec<u8>, String>;
 
+/// Whether deciphering can get `key` back after textbook RSA dropped its trailing zero
+/// bytes: block mode XOR pads it to the ciphertext length, AES to the smallest AES key size
+/// that holds it, and stream mode XOR can't pad it at all. Ciphering must reject the rest.
+type Recoverable = fn(&[u8], bool) -> bool;
+
+fn trimmed_len(key: &[u8]) -> usize {
+    key.iter()
+        .rposition(|&byte| byte != 0)
+        .map_or(0, |last| last + 1)
+}
+
+fn xor_key_recoverable(key: &[u8], block: bool) -> bool {
+    block || trimmed_len(key) == key.len()
+}
+
+fn aes_key_recoverable(key: &[u8], _block: bool) -> bool {
+    let trimmed = trimmed_len(key);
+    AES_KEY_LENS.into_iter().find(|&len| len >= trimmed) == Some(key.len())
+}
+
 /// Runs `CASES` pgp roundtrips: `key_len` picks the symmetric key size and `message` the
 /// message for that key size. Stream modes lose trailing zeros to padding, block modes don't.
 fn pgp_roundtrips(
@@ -156,8 +176,7 @@ fn pgp_roundtrips(
     block: bool,
     key_len: fn(&mut Prng) -> usize,
     message: fn(&mut Prng, usize) -> Vec<u8>,
-    cipher: PgpCipher,
-    decipher: PgpDecipher,
+    (cipher, decipher, recoverable): (PgpCipher, PgpDecipher, Recoverable),
 ) {
     let mut prng = Prng::from_env(property);
     let keys = key_pool(&mut prng, &PGP_KEY_BITS);
@@ -165,23 +184,28 @@ fn pgp_roundtrips(
     for case in 0..CASES {
         let rsa_key = &keys[prng.below(keys.len())];
         let key_len = key_len(&mut prng);
-        let mut symmetric_key = prng.bytes(key_len);
-        // Workaround for #116: RSA drops a symmetric key's trailing zero bytes, so keys
-        // ending in 0x00 don't roundtrip yet. Remove once #116 is fixed.
-        if symmetric_key.last() == Some(&0) {
-            symmetric_key[key_len - 1] = 1;
+        let mut key_bytes = prng.bytes(key_len);
+        // Textbook RSA drops the key's trailing zero bytes (#116): make them common.
+        if prng.below(4) == 0 {
+            let zeros = prng.below(key_len.min(10) + 1);
+            key_bytes[key_len - zeros..].fill(0);
         }
-        let symmetric_key = encoding::hex::encode(&symmetric_key);
+        let symmetric_key = encoding::hex::encode(&key_bytes);
         let message = message(&mut prng, key_len);
         let context = format!("case {case}: key {symmetric_key}, message {message:02x?}");
 
-        let (ciphered_key, ciphertext) = cipher(
+        let ciphered = cipher(
             &message,
             block,
             rsa::Padding::None,
             &format!("{symmetric_key}:{}", rsa_key.public_key()),
-        )
-        .unwrap_or_else(|err| panic!("{context}: cipher failed: {err}"));
+        );
+        if !recoverable(&key_bytes, block) {
+            assert!(ciphered.is_err(), "{context}: unrecoverable key accepted");
+            continue;
+        }
+        let (ciphered_key, ciphertext) =
+            ciphered.unwrap_or_else(|err| panic!("{context}: cipher failed: {err}"));
         let plaintext = decipher(
             &ciphertext,
             block,
@@ -214,8 +238,7 @@ fn pgp_xor_stream_roundtrips() {
         false,
         xor_key_len,
         |prng, key_len| prng.message(key_len, MAX_MESSAGE_LEN),
-        pgp::cipher_xor,
-        pgp::decipher_xor,
+        (pgp::cipher_xor, pgp::decipher_xor, xor_key_recoverable),
     );
 }
 
@@ -226,8 +249,7 @@ fn pgp_xor_block_roundtrips() {
         true,
         xor_key_len,
         |prng, key_len| prng.bytes(key_len),
-        pgp::cipher_xor,
-        pgp::decipher_xor,
+        (pgp::cipher_xor, pgp::decipher_xor, xor_key_recoverable),
     );
 }
 
@@ -238,8 +260,7 @@ fn pgp_aes_stream_roundtrips() {
         false,
         aes_key_len,
         |prng, _| prng.message(AES_BLOCK_LEN, MAX_MESSAGE_LEN),
-        pgp::cipher_aes,
-        pgp::decipher_aes,
+        (pgp::cipher_aes, pgp::decipher_aes, aes_key_recoverable),
     );
 }
 
@@ -250,7 +271,6 @@ fn pgp_aes_block_roundtrips() {
         true,
         aes_key_len,
         |prng, _| prng.bytes(AES_BLOCK_LEN),
-        pgp::cipher_aes,
-        pgp::decipher_aes,
+        (pgp::cipher_aes, pgp::decipher_aes, aes_key_recoverable),
     );
 }
