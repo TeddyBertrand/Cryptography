@@ -86,7 +86,7 @@ fn random_bytes<const N: usize>() -> Result<[u8; N], String> {
 }
 
 fn validate_shared_secret(shared_secret: &[u8; 32]) -> Result<(), String> {
-    if shared_secret.iter().all(|byte| *byte == 0) {
+    if shared_secret.iter().fold(0, |acc, byte| acc | byte) == 0 {
         return Err("X25519 shared secret is invalid".to_string());
     }
     Ok(())
