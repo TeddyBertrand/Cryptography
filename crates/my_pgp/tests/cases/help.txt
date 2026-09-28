@@ -11,6 +11,7 @@ Cipher or decipher MESSAGE using a given CRYPTO_SYSTEM. The MESSAGE is read from
      CRYPTO_SYSTEM
         "xor"            computation using XOR algorithm
         "aes"            computation using AES algorithm
+        "X25519"         computation using X25519 algorithm
         "rsa"            computation using RSA algorithm
         "pgp-xor"        computation using both RSA and XOR algorithm
         "pgp-aes"        computation using both RSA and AES algorithm
