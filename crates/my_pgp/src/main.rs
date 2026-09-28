@@ -118,14 +118,24 @@ fn run_rsa(command: Command) -> Result<()> {
     }
 }
 
-fn run_pgp_xor(command: Command) -> Result<()> {
+type PgpCipher = fn(&[u8], bool, &str) -> std::result::Result<(String, String), String>;
+type PgpDecipher = fn(&str, bool, &str) -> std::result::Result<Vec<u8>, String>;
+
+/// Shared `pgp-*` plumbing: the symmetric layer is picked by the `cipher`/`decipher` pair.
+/// `strip_trailing_lf` mirrors how the matching plain symmetric system reads its message.
+fn run_pgp(
+    command: Command,
+    strip_trailing_lf: bool,
+    cipher: PgpCipher,
+    decipher: PgpDecipher,
+) -> Result<()> {
     let key = command.key.ok_or_else(|| Error::new("missing key"))?;
-    let message = read_message(true)?;
+    let message = read_message(strip_trailing_lf)?;
 
     match command.mode {
         Mode::Cipher => {
             let (ciphered_key_hex, ciphered_message_hex) =
-                pgp::cipher_xor(&message, command.block, &key).map_err(Error::new)?;
+                cipher(&message, command.block, &key).map_err(Error::new)?;
             println!("{ciphered_key_hex}");
             println!("{ciphered_message_hex}");
             Ok(())
@@ -133,8 +143,7 @@ fn run_pgp_xor(command: Command) -> Result<()> {
         Mode::Decipher => {
             let ciphertext_hex = std::str::from_utf8(&message)
                 .map_err(|_| Error::new("ciphertext must be UTF-8 hexadecimal text"))?;
-            let plaintext =
-                pgp::decipher_xor(ciphertext_hex, command.block, &key).map_err(Error::new)?;
+            let plaintext = decipher(ciphertext_hex, command.block, &key).map_err(Error::new)?;
             io::stdout()
                 .write_all(&plaintext)
                 .map_err(|err| Error::new(format!("failed to write standard output: {err}")))
@@ -180,12 +189,22 @@ fn run_command(command: Command) -> Result<()> {
             }
         },
         CryptoSystem::PgpXor => match command.mode {
-            Mode::Cipher | Mode::Decipher => run_pgp_xor(command),
+            Mode::Cipher | Mode::Decipher => {
+                run_pgp(command, true, pgp::cipher_xor, pgp::decipher_xor)
+            }
             Mode::Generate { .. } | Mode::GenerateRandom { .. } => {
                 Err(Error::new("crypto system is not implemented"))
             }
         },
-        CryptoSystem::PgpAes => Err(Error::new("crypto system is not implemented")),
+        CryptoSystem::PgpAes => match command.mode {
+            Mode::Cipher | Mode::Decipher => {
+                let block = command.block;
+                run_pgp(command, block, pgp::cipher_aes, pgp::decipher_aes)
+            }
+            Mode::Generate { .. } | Mode::GenerateRandom { .. } => {
+                Err(Error::new("crypto system is not implemented"))
+            }
+        },
     }
 }
 
