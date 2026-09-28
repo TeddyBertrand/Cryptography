@@ -144,18 +144,28 @@ impl Montgomery {
     }
 
     /// Maps a `k + 1`-limb value `t < 2n` to `t mod n` in `k` limbs.
+    ///
+    /// Always runs a full trial subtraction then a masked one, so whether the extra reduction
+    /// happened (the classic Montgomery timing leak) doesn't show in branches or run time.
     fn subtract_if_needed(&self, t: &mut Vec<u64>) {
         let n = &self.modulus;
         let k = n.len();
 
-        if t[k] != 0 || !less_than(&t[..k], n) {
-            let mut borrow = false;
-            for (t_j, &n_j) in t.iter_mut().zip(n) {
-                let (diff, borrow1) = t_j.overflowing_sub(n_j);
-                let (diff, borrow2) = diff.overflowing_sub(borrow as u64);
-                *t_j = diff;
-                borrow = borrow1 || borrow2;
-            }
+        let mut borrow = 0u64;
+        for (&t_j, &n_j) in t.iter().zip(n) {
+            let (diff, borrow1) = t_j.overflowing_sub(n_j);
+            let (_, borrow2) = diff.overflowing_sub(borrow);
+            borrow = (borrow1 | borrow2) as u64;
+        }
+        // `t >= n` when the top limb is set or the low limbs didn't borrow.
+        let mask = 0u64.wrapping_sub(((t[k] != 0) as u64) | (borrow ^ 1));
+
+        let mut borrow = 0u64;
+        for (t_j, &n_j) in t.iter_mut().zip(n) {
+            let (diff, borrow1) = t_j.overflowing_sub(n_j & mask);
+            let (diff, borrow2) = diff.overflowing_sub(borrow);
+            *t_j = diff;
+            borrow = (borrow1 | borrow2) as u64;
         }
 
         t.truncate(k);
@@ -189,10 +199,6 @@ fn pad(limbs: &[u64], k: usize) -> Vec<u64> {
     let mut padded = limbs.to_vec();
     padded.resize(k, 0);
     padded
-}
-
-fn less_than(a: &[u64], b: &[u64]) -> bool {
-    a.iter().rev().lt(b.iter().rev())
 }
 
 #[cfg(test)]
