@@ -1,6 +1,6 @@
 use std::{
     io::{self, Read, Write},
-    process,
+    panic, process,
 };
 
 use aes::Aes;
@@ -352,8 +352,14 @@ fn run() -> Result<()> {
 }
 
 fn main() {
-    if let Err(err) = run() {
-        eprintln!("{err}");
-        process::exit(core::EXIT_CODE);
+    match panic::catch_unwind(run) {
+        Ok(Ok(())) => {}
+        Ok(Err(err)) => {
+            eprintln!("{err}");
+            process::exit(core::EXIT_CODE);
+        }
+        // A panic is a bug, already reported on stderr by the panic hook: still exit 84,
+        // as the subject asks for any error, instead of Rust's 101.
+        Err(_) => process::exit(core::EXIT_CODE),
     }
 }
