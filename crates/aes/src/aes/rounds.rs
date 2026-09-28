@@ -1,12 +1,12 @@
-use core::{Bytes, Error, Result};
+use core::{Bytes, Result};
 
 use super::{field, key_expansion, state::State};
 
 pub fn cipher(state: &mut State, key: &Bytes, round_count: usize) -> Result<()> {
-    let round_keys = aes_128_round_keys(key, round_count)?;
+    let round_keys = key_expansion::expand(key, round_count)?;
     add_round_key(state, &round_keys[0]);
 
-    for round_key in &round_keys[1..10] {
+    for round_key in &round_keys[1..round_count] {
         substitute_bytes(state);
         shift_rows(state);
         mix_columns(state);
@@ -15,15 +15,15 @@ pub fn cipher(state: &mut State, key: &Bytes, round_count: usize) -> Result<()> 
 
     substitute_bytes(state);
     shift_rows(state);
-    add_round_key(state, &round_keys[10]);
+    add_round_key(state, &round_keys[round_count]);
     Ok(())
 }
 
 pub fn decipher(state: &mut State, key: &Bytes, round_count: usize) -> Result<()> {
-    let round_keys = aes_128_round_keys(key, round_count)?;
-    add_round_key(state, &round_keys[10]);
+    let round_keys = key_expansion::expand(key, round_count)?;
+    add_round_key(state, &round_keys[round_count]);
 
-    for round in (1..10).rev() {
+    for round in (1..round_count).rev() {
         inverse_shift_rows(state);
         inverse_substitute_bytes(state);
         add_round_key(state, &round_keys[round]);
@@ -34,14 +34,6 @@ pub fn decipher(state: &mut State, key: &Bytes, round_count: usize) -> Result<()
     inverse_substitute_bytes(state);
     add_round_key(state, &round_keys[0]);
     Ok(())
-}
-
-fn aes_128_round_keys(key: &Bytes, round_count: usize) -> Result<key_expansion::RoundKeys> {
-    if round_count != 10 {
-        return Err(Error::new("AES-192 and AES-256 are not implemented"));
-    }
-
-    key_expansion::expand_128(key)
 }
 
 fn add_round_key(state: &mut State, round_key: &[u8; 16]) {
