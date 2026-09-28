@@ -48,6 +48,15 @@ fn run_xor(command: Command) -> Result<()> {
     }
 }
 
+fn run_rsa_generate(p: &str, q: &str) -> Result<()> {
+    let keys = rsa::generate(p, q).map_err(Error::new)?;
+
+    println!("public key: {}", keys.public_key());
+    println!("private key: {}", keys.private_key());
+
+    Ok(())
+}
+
 fn read_message(strip_trailing_lf: bool) -> Result<Vec<u8>> {
     let mut message = Vec::new();
     io::stdin()
@@ -67,7 +76,11 @@ fn read_message(strip_trailing_lf: bool) -> Result<Vec<u8>> {
 fn run_command(command: Command) -> Result<()> {
     match command.system {
         CryptoSystem::Xor => run_xor(command),
-        CryptoSystem::Aes | CryptoSystem::Rsa | CryptoSystem::PgpXor | CryptoSystem::PgpAes => {
+        CryptoSystem::Rsa => match command.mode {
+            Mode::Generate { p, q } => run_rsa_generate(&p, &q),
+            Mode::Cipher | Mode::Decipher => Err(Error::new("crypto system is not implemented")),
+        },
+        CryptoSystem::Aes | CryptoSystem::PgpXor | CryptoSystem::PgpAes => {
             Err(Error::new("crypto system is not implemented"))
         }
     }
