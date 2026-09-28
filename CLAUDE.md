@@ -103,7 +103,7 @@ Dev shell via `flake.nix` — CI's `build-test-lint` and `retrocompat` jobs run 
 
 - Unit tests inline (`#[cfg(test)] mod tests`) in each crate.
 - `crates/my_pgp/tests/functional.rs` — data-driven: each `tests/cases/*.txt` (`== ARGS ==`, `== STDIN ==`, `== STDOUT ==`, `== STDERR ==`, `== EXIT ==` sections) runs the real binary; `== THEN ==` pipes stdout into a second run (randomized ciphers), `== SKIP ==` disables a case with a reason. New CLI case = new `.txt`, no Rust.
-- `crates/my_pgp/tests/roundtrip/` — property tests, 1000 cases each, SplitMix64 PRNG. Failing run prints seed; replay with `PROPERTY_SEED=0x...`.
+- `crates/my_pgp/tests/roundtrip/` — property tests, 1000 cases each (`PROPERTY_CASES=N` overrides; nightly Jenkins uses 100000), SplitMix64 PRNG. Failing run prints seed and case count; replay with `PROPERTY_SEED=0x... PROPERTY_CASES=N`.
 - `tests/*.sh` — subject PDF examples piped through `cargo run -p my_pgp`.
 
 ## Behavior notes
