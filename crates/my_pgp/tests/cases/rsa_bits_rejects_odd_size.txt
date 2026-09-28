@@ -1,0 +1,10 @@
+== ARGS ==
+rsa
+--bits
+15
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+rsa: key size must be an even number of bits, at least 16
+== EXIT ==
+84

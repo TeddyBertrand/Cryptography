@@ -1,0 +1,10 @@
+== ARGS ==
+rsa
+--bits
+abc
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+invalid key size
+== EXIT ==
+84

@@ -1,6 +1,14 @@
 //! Data-driven functional tests: each `tests/cases/*.txt` file describes one
 //! invocation of the real `my_pgp` binary (args/stdin/stdout/stderr/exit).
 //! Adding a case needs no Rust change — just drop a new `.txt` file in `tests/cases`.
+//!
+//! An optional `== THEN ==` section holds the arguments of a second invocation fed the first
+//! one's stdout, as in `my_pgp ARGS < STDIN | my_pgp THEN`. The first run must succeed without
+//! stderr, and STDOUT/STDERR/EXIT describe the second one: randomized ciphers (OAEP, X25519) are
+//! checked by their roundtrip.
+//!
+//! An optional `== SKIP ==` section keeps a case from running and says why (e.g. the issue
+//! tracking the missing behavior). Skipped cases are listed on stderr (`--nocapture`).
 
 use std::collections::HashMap;
 use std::ffi::OsStr;
@@ -12,6 +20,8 @@ use std::process::{Command, Output, Stdio};
 
 struct Case {
     args: Vec<String>,
+    then: Option<Vec<String>>,
+    skip: Option<String>,
     stdin: Vec<u8>,
     stdout: Vec<u8>,
     stderr: Vec<u8>,
@@ -45,10 +55,13 @@ fn parse_case(path: &Path) -> Case {
         }
     }
 
-    let args = section(&sections, "ARGS")
-        .lines()
-        .map(str::to_string)
-        .collect();
+    let args_of = |name| {
+        section(&sections, name)
+            .lines()
+            .map(str::to_string)
+            .collect()
+    };
+    let skip = section(&sections, "SKIP").trim().to_string();
     let exit_text = section(&sections, "EXIT");
     let exit: i32 = exit_text
         .trim()
@@ -56,7 +69,9 @@ fn parse_case(path: &Path) -> Case {
         .unwrap_or_else(|err| panic!("{}: bad EXIT value {exit_text:?}: {err}", path.display()));
 
     Case {
-        args,
+        args: args_of("ARGS"),
+        then: sections.contains_key("THEN").then(|| args_of("THEN")),
+        skip: (!skip.is_empty()).then_some(skip),
         stdin: section(&sections, "STDIN").into_bytes(),
         stdout: section(&sections, "STDOUT").into_bytes(),
         stderr: section(&sections, "STDERR").into_bytes(),
@@ -64,9 +79,9 @@ fn parse_case(path: &Path) -> Case {
     }
 }
 
-fn run(case: &Case) -> Output {
+fn run(args: &[String], stdin: &[u8]) -> Output {
     let mut child = Command::new(env!("CARGO_BIN_EXE_my_pgp"))
-        .args(&case.args)
+        .args(args)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -76,7 +91,7 @@ fn run(case: &Case) -> Output {
         .stdin
         .take()
         .expect("piped stdin")
-        .write_all(&case.stdin)
+        .write_all(stdin)
         .expect("failed to write stdin");
     child.wait_with_output().expect("failed to wait on my_pgp")
 }
@@ -92,9 +107,24 @@ fn diff(label: &str, expected: &[u8], actual: &[u8]) -> Option<String> {
     ))
 }
 
-fn check_case(path: &Path) {
+/// Runs the case at `path`, or gives back its `SKIP` reason without running it.
+fn check_case(path: &Path) -> Option<String> {
     let case = parse_case(path);
-    let out = run(&case);
+    if case.skip.is_some() {
+        return case.skip;
+    }
+
+    let mut out = run(&case.args, &case.stdin);
+    if let Some(then) = &case.then {
+        assert!(
+            out.status.success() && out.stderr.is_empty(),
+            "{}: first run failed before THEN:\n    exit: {:?}\n    stderr: {:?}",
+            path.display(),
+            out.status.code(),
+            String::from_utf8_lossy(&out.stderr)
+        );
+        out = run(then, &out.stdout);
+    }
 
     let mut failures = Vec::new();
     failures.extend(diff("stdout", &case.stdout, &out.stdout));
@@ -113,6 +143,7 @@ fn check_case(path: &Path) {
         path.display(),
         failures.join("\n")
     );
+    None
 }
 
 fn case_files() -> Vec<PathBuf> {
@@ -134,17 +165,25 @@ fn functional_cases() {
     let previous_hook = panic::take_hook();
     panic::set_hook(Box::new(|_| {}));
     let mut failures = Vec::new();
+    let mut skipped = Vec::new();
     for path in &paths {
-        if let Err(payload) = panic::catch_unwind(AssertUnwindSafe(|| check_case(path))) {
-            let message = payload
-                .downcast_ref::<String>()
-                .cloned()
-                .or_else(|| payload.downcast_ref::<&str>().map(|s| s.to_string()))
-                .unwrap_or_else(|| "unknown panic".to_string());
-            failures.push(message);
+        match panic::catch_unwind(AssertUnwindSafe(|| check_case(path))) {
+            Ok(None) => {}
+            Ok(Some(reason)) => skipped.push(format!("{}: {reason}", path.display())),
+            Err(payload) => {
+                let message = payload
+                    .downcast_ref::<String>()
+                    .cloned()
+                    .or_else(|| payload.downcast_ref::<&str>().map(|s| s.to_string()))
+                    .unwrap_or_else(|| "unknown panic".to_string());
+                failures.push(message);
+            }
         }
     }
     panic::set_hook(previous_hook);
+    for skip in &skipped {
+        eprintln!("skipped {skip}");
+    }
 
     assert!(failures.is_empty(), "\n{}\n", failures.join("\n\n"));
 }

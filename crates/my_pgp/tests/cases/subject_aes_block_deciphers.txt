@@ -1,0 +1,12 @@
+== ARGS ==
+aes
+-d
+-b
+57696e74657220697320636f6d696e67
+== STDIN ==
+744ce22c385958348f0df26eceb62eef
+== STDOUT ==
+All men must die
+== STDERR ==
+== EXIT ==
+0
