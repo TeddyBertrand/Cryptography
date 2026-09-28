@@ -14,6 +14,7 @@ services:
       - JENKINS_ADMIN_PASSWORD=${JENKINS_ADMIN_PASSWORD}
       - JENKINS_URL=${JENKINS_EXTERNAL_URL:-http://localhost:8080}
       - JENKINS_ADMIN_EMAIL=${JENKINS_ADMIN_EMAIL:-admin@example.invalid}
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
     volumes:
       - jenkins_home:/var/jenkins_home
     healthcheck:
@@ -35,6 +36,13 @@ services:
       - JENKINS_URL=${JENKINS_URL:-http://jenkins:8080}
       - JENKINS_AGENT_NAME=${JENKINS_AGENT_NAME:-rust-agent}
       - JENKINS_SECRET=${JENKINS_AGENT_SECRET}
+    # Host Docker daemon for `agent { docker { ... } }` stages. The workspace
+    # lives in a volume so docker-workflow can share it via --volumes-from.
+    group_add:
+      - "${DOCKER_GID:-999}"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - rust_agent_workspace:/home/jenkins/agent
     entrypoint:
       - sh
       - -c
@@ -67,3 +75,4 @@ services:
 
 volumes:
   jenkins_home:
+  rust_agent_workspace:

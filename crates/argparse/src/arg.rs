@@ -19,6 +19,7 @@ pub struct Arg {
     pub(crate) section: Option<&'static str>,
     pub(crate) group: Option<&'static str>,
     pub(crate) conflicts: Vec<&'static str>,
+    pub(crate) hidden: bool,
 }
 
 impl Arg {
@@ -53,6 +54,7 @@ impl Arg {
             section: None,
             group: None,
             conflicts: Vec::new(),
+            hidden: false,
         }
     }
 
@@ -100,6 +102,12 @@ impl Arg {
 
     pub fn group(mut self, group: &'static str) -> Self {
         self.group = Some(group);
+        self
+    }
+
+    /// Hidden args still parse but are left out of the generated help.
+    pub fn hidden(mut self, hidden: bool) -> Self {
+        self.hidden = hidden;
         self
     }
 

@@ -7,6 +7,8 @@ edition.workspace = true
 workspace = true
 
 [dependencies]
+core = { path = "../core" }
+encoding = { path = "../encoding" }
 rsa = { path = "../rsa" }
 xor = { path = "../xor" }
 aes = { path = "../aes" }

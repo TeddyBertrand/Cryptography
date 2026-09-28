@@ -82,6 +82,8 @@ name = "pgp"
 version = "0.1.0"
 dependencies = [
  "aes",
+ "core",
+ "encoding",
  "rsa",
  "xor",
 ]
@@ -104,6 +106,8 @@ version = "0.1.0"
 dependencies = [
  "bigint",
  "encoding",
+ "prime",
+ "random",
 ]
 
 [[package]]
