@@ -66,6 +66,9 @@ pipeline {
         // agent's workDir, which is the persistent rust_agent_workspace
         // volume (docker-compose.yml), so records survive builds and restarts.
         BENCH_RECORDS = '/home/jenkins/agent/bench-records/cryptography-nightly.csv'
+        // Roundtrip property cases per cryptosystem in the Stress tests stage,
+        // 100x the per-PR default (crates/my_pgp/tests/roundtrip/prng.rs).
+        PROPERTY_CASES = '100000'
     }
 
     stages {
