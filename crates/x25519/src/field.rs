@@ -72,6 +72,25 @@ impl FieldElement {
         result
     }
 
+    /// `self^exponent`, with `exponent` little-endian. Branches on the exponent's bits, so
+    /// the exponent must be public (square roots use constants).
+    pub fn pow(self, exponent: &[u8; 32]) -> Self {
+        let mut result = Self::one();
+
+        for bit in (0..256).rev() {
+            result = result.square();
+            if (exponent[bit / 8] >> (bit % 8)) & 1 == 1 {
+                result = result * self;
+            }
+        }
+
+        result
+    }
+
+    pub fn negate(self) -> Self {
+        Self::zero() - self
+    }
+
     pub fn conditional_swap(left: &mut Self, right: &mut Self, choice: u8) {
         let mask = 0_u64.wrapping_sub(u64::from(choice));
         for index in 0..LIMB_COUNT {
