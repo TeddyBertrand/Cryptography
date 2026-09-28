@@ -1,3 +1,5 @@
+import groovy.transform.Field
+
 // Plain pipelineJob (not multibranch): githubNotify can't infer the repo
 // from the SCM source, so account/repo/sha are passed explicitly.
 def notifyGitHub(String status, String description) {
@@ -18,11 +20,12 @@ def notifyGitHub(String status, String description) {
     }
 }
 
-// Filled by the Test and Coverage stages for the Discord report; unassigned
-// (no `def`) so they live in the script binding, visible from every stage.
+// Filled by the Test and Coverage stages for the Discord report; @Field
+// script fields rather than locals so every stage and method sees them (a
+// bare assignment would go through the binding, which Jenkins warns about).
 // They stay null when the build stops before their stage.
-testSummary = null
-lineCoverage = null
+@Field def testSummary = null
+@Field def lineCoverage = null
 
 // Best-effort like notifyGitHub: see discord.groovy.
 def reportDiscord() {

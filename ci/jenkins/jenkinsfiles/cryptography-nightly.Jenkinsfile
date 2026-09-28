@@ -1,3 +1,5 @@
+import groovy.transform.Field
+
 // Nightly run (cron trigger in seed-job.yaml): benchmarks and the slow
 // release suite, too slow for every push. Bench medians are plotted build
 // over build by the Plot plugin.
@@ -21,10 +23,11 @@ def plotBench(String file, String title, String unit) {
 }
 
 // Filled by the Records and Stress tests stages for the Discord report;
-// unassigned (no `def`) so they live in the script binding, visible from
-// every stage. Null when the build stops before their stage.
-benchReport = null
-stressResult = null
+// @Field script fields rather than locals so every stage and method sees
+// them (a bare assignment would go through the binding, which Jenkins warns
+// about). Null when the build stops before their stage.
+@Field def benchReport = null
+@Field def stressResult = null
 
 // Best-effort: see discord.groovy.
 def reportDiscord() {
