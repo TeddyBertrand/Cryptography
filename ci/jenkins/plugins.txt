@@ -14,3 +14,4 @@ junit
 ws-cleanup
 coverage
 docker-workflow
+pipeline-githubnotify-step

@@ -1,3 +1,23 @@
+// Plain pipelineJob (not multibranch): githubNotify can't infer the repo
+// from the SCM source, so account/repo/sha are passed explicitly.
+def notifyGitHub(String status, String description) {
+    // Best-effort: a missing/invalid token or a GitHub outage must not fail
+    // the build itself.
+    try {
+        githubNotify(
+            credentialsId: 'github-status-token',
+            context: 'continuous-integration/jenkins',
+            account: 'TeddyBertrand',
+            repo: 'Cryptography',
+            sha: env.GIT_COMMIT,
+            status: status,
+            description: description
+        )
+    } catch (err) {
+        echo "GitHub status not posted: ${err.message}"
+    }
+}
+
 pipeline {
     agent { label 'rust-agent' }
 
@@ -8,12 +28,7 @@ pipeline {
     stages {
         stage('Notify pending') {
             steps {
-                githubNotify(
-                    credentialsId: 'github-status-token',
-                    context: 'continuous-integration/jenkins',
-                    status: 'PENDING',
-                    description: 'Build started'
-                )
+                notifyGitHub('PENDING', 'Build started')
             }
         }
         stage('Format') {
@@ -51,14 +66,18 @@ pipeline {
         }
         stage('Coverage') {
             steps {
-                sh 'cargo llvm-cov --workspace --cobertura --output-path target/coverage/cobertura.xml'
+                sh 'mkdir -p target/coverage && cargo llvm-cov --workspace --cobertura --output-path target/coverage/cobertura.xml'
             }
             post {
                 always {
+                    // llvm-cov emits one <method> per closure instance, so
+                    // names like `{closure#0}` repeat within a class; skip
+                    // those duplicates instead of rejecting the whole report.
                     recordCoverage(
                         tools: [[parser: 'COBERTURA', pattern: 'target/coverage/cobertura.xml']],
+                        ignoreParsingErrors: true,
                         qualityGates: [
-                            [threshold: 70.0, metric: 'LINE', baseline: 'PROJECT', unstable: true]
+                            [threshold: 70.0, metric: 'LINE', baseline: 'PROJECT', criticality: 'UNSTABLE']
                         ]
                     )
                 }
@@ -92,20 +111,10 @@ pipeline {
 
     post {
         success {
-            githubNotify(
-                credentialsId: 'github-status-token',
-                context: 'continuous-integration/jenkins',
-                status: 'SUCCESS',
-                description: 'Build succeeded'
-            )
+            notifyGitHub('SUCCESS', 'Build succeeded')
         }
         failure {
-            githubNotify(
-                credentialsId: 'github-status-token',
-                context: 'continuous-integration/jenkins',
-                status: 'FAILURE',
-                description: 'Build failed'
-            )
+            notifyGitHub('FAILURE', 'Build failed')
         }
         always {
             cleanWs()
