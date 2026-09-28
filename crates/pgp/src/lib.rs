@@ -8,9 +8,44 @@ pub fn split_key(key: &str) -> Result<(&str, &str), String> {
         .ok_or_else(|| "pgp: key must be formatted as SYMMETRIC_KEY:RSA_KEY".to_string())
 }
 
+/// AES key sizes in bytes, smallest first.
+const AES_KEY_LENS: [usize; 3] = [16, 24, 32];
+
+/// Textbook RSA ciphers the symmetric key as a little-endian number, so deciphering gives
+/// it back without its trailing zero bytes. OAEP keeps the exact length.
+fn drops_trailing_zeros(padding: rsa::Padding) -> bool {
+    padding == rsa::Padding::None
+}
+
+/// Length of `key` without its trailing zero bytes: what textbook RSA gives back.
+fn trimmed_len(key: &[u8]) -> usize {
+    key.iter()
+        .rposition(|&byte| byte != 0)
+        .map_or(0, |last| last + 1)
+}
+
+/// The AES key size a deciphered key of `len` bytes is padded back to: the smallest that
+/// holds it. Wrong only for a 24- or 32-byte key ending in 8 or more zero bytes, which
+/// ciphering rejects.
+fn aes_key_len(len: usize) -> usize {
+    AES_KEY_LENS
+        .into_iter()
+        .find(|&key_len| key_len >= len)
+        .unwrap_or(len)
+}
+
+fn unrecoverable_key_error() -> String {
+    "pgp: textbook RSA drops the symmetric key's trailing 00 bytes, so this key can't be \
+     recovered when deciphering; use another key or -p"
+        .to_string()
+}
+
 /// Ciphers `message` with `pgp-xor`: RSA-ciphers the symmetric key (with `padding`),
 /// XOR-ciphers the message (`block` selects single-block vs. stream mode, matching plain
 /// `xor -b`). Returns `(ciphered_key_hex, ciphered_message_hex)`, printed as two lines.
+///
+/// Block mode recovers the key length from the ciphertext length. Stream mode can't, so
+/// it rejects a key ending in `00` unless `padding` keeps the length.
 pub fn cipher_xor(
     message: &[u8],
     block: bool,
@@ -20,6 +55,10 @@ pub fn cipher_xor(
     let (symmetric_key_hex, rsa_key) = split_key(key)?;
     let symmetric_key = encoding::hex::decode(symmetric_key_hex)?;
     let (e, n) = rsa::parse_key(rsa_key)?;
+    if !block && drops_trailing_zeros(padding) && trimmed_len(&symmetric_key) < symmetric_key.len()
+    {
+        return Err(unrecoverable_key_error());
+    }
 
     let ciphered_key_hex = rsa::cipher_hex(&symmetric_key, &e, &n, padding)?;
 
@@ -49,10 +88,14 @@ pub fn decipher_xor(
     let (ciphered_key_hex, rsa_key) = split_key(key)?;
     let (d, n) = rsa::parse_key(rsa_key)?;
 
-    let symmetric_key = rsa::decipher_hex(ciphered_key_hex, &d, &n, padding)?;
+    let mut symmetric_key = rsa::decipher_hex(ciphered_key_hex, &d, &n, padding)?;
+    let ciphertext = Bytes::new(encoding::hex::decode(ciphertext_hex)?);
+    // In block mode the key is as long as the ciphertext: restore its trailing zeros.
+    if block && drops_trailing_zeros(padding) && symmetric_key.len() < ciphertext.len() {
+        symmetric_key.resize(ciphertext.len(), 0);
+    }
 
     let xor = Xor::new(Bytes::new(symmetric_key)).map_err(|err| err.to_string())?;
-    let ciphertext = Bytes::new(encoding::hex::decode(ciphertext_hex)?);
     let plaintext = if block {
         let mut plaintext = xor
             .cipher_block(&ciphertext)
@@ -72,6 +115,9 @@ pub fn decipher_xor(
 /// Ciphers `message` with `pgp-aes`: RSA-ciphers the symmetric key (with `padding`),
 /// AES-ciphers the message (`block` selects single-block vs. stream mode, matching plain
 /// `aes -b`). Returns `(ciphered_key_hex, ciphered_message_hex)`, printed as two lines.
+///
+/// Deciphering pads the key back to the smallest AES size that holds it, so this rejects
+/// a key that would come back as a shorter AES key, unless `padding` keeps the length.
 pub fn cipher_aes(
     message: &[u8],
     block: bool,
@@ -81,6 +127,12 @@ pub fn cipher_aes(
     let (symmetric_key_hex, rsa_key) = split_key(key)?;
     let symmetric_key = encoding::hex::decode(symmetric_key_hex)?;
     let (e, n) = rsa::parse_key(rsa_key)?;
+    if drops_trailing_zeros(padding)
+        && AES_KEY_LENS.contains(&symmetric_key.len())
+        && aes_key_len(trimmed_len(&symmetric_key)) != symmetric_key.len()
+    {
+        return Err(unrecoverable_key_error());
+    }
 
     let ciphered_key_hex = rsa::cipher_hex(&symmetric_key, &e, &n, padding)?;
 
@@ -110,7 +162,10 @@ pub fn decipher_aes(
     let (ciphered_key_hex, rsa_key) = split_key(key)?;
     let (d, n) = rsa::parse_key(rsa_key)?;
 
-    let symmetric_key = rsa::decipher_hex(ciphered_key_hex, &d, &n, padding)?;
+    let mut symmetric_key = rsa::decipher_hex(ciphered_key_hex, &d, &n, padding)?;
+    if drops_trailing_zeros(padding) {
+        symmetric_key.resize(aes_key_len(symmetric_key.len()), 0);
+    }
 
     let aes = aes_from_key(symmetric_key)?;
     let mut ciphertext = encoding::hex::decode(ciphertext_hex)?;
@@ -265,6 +320,126 @@ mod tests {
             decipher_aes(&ciphered_message_hex, false, Padding::None, &decipher_key).unwrap();
 
         assert_eq!(plaintext, message);
+    }
+
+    type CipherFn = fn(&[u8], bool, Padding, &str) -> Result<(String, String), String>;
+    type DecipherFn = fn(&str, bool, Padding, &str) -> Result<Vec<u8>, String>;
+
+    /// Ciphers then deciphers `message` with `symmetric_key` and the subject RSA key pair.
+    fn roundtrip(
+        cipher: CipherFn,
+        decipher: DecipherFn,
+        message: &[u8],
+        block: bool,
+        symmetric_key: &str,
+    ) -> Vec<u8> {
+        let (ciphered_key_hex, ciphered_message_hex) = cipher(
+            message,
+            block,
+            Padding::None,
+            &format!("{symmetric_key}:{SUBJECT_RSA_PUBLIC}"),
+        )
+        .unwrap();
+        let decipher_key = format!("{ciphered_key_hex}:{SUBJECT_RSA_PRIVATE}");
+
+        decipher(&ciphered_message_hex, block, Padding::None, &decipher_key).unwrap()
+    }
+
+    #[test]
+    fn xor_block_mode_keeps_trailing_zero_bytes_of_the_key() {
+        // #116: `4100` used to come back as `41`, one byte short of the message.
+        assert_eq!(
+            roundtrip(cipher_xor, decipher_xor, b"hi", true, "4100"),
+            b"hi"
+        );
+        assert_eq!(
+            roundtrip(cipher_xor, decipher_xor, b"hi", true, "0000"),
+            b"hi"
+        );
+    }
+
+    #[test]
+    fn xor_stream_mode_rejects_a_key_ending_in_zero_without_oaep() {
+        let error = cipher_xor(
+            b"hello",
+            false,
+            Padding::None,
+            &format!("4100:{SUBJECT_RSA_PUBLIC}"),
+        )
+        .unwrap_err();
+        assert!(error.contains("trailing 00"), "{error}");
+
+        let (ciphered_key_hex, ciphered_message_hex) = cipher_xor(
+            b"hello",
+            false,
+            Padding::Oaep,
+            &format!("4100:{OAEP_RSA_PUBLIC}"),
+        )
+        .unwrap();
+        let decipher_key = format!("{ciphered_key_hex}:{OAEP_RSA_PRIVATE}");
+        assert_eq!(
+            decipher_xor(&ciphered_message_hex, false, Padding::Oaep, &decipher_key).unwrap(),
+            b"hello"
+        );
+    }
+
+    #[test]
+    fn aes_keeps_trailing_zero_bytes_of_the_key() {
+        let message = b"The night is dark and full of terrors";
+        let keys = [
+            "57696e74657220697320636f6d000000",
+            "00000000000000000000000000000000",
+            "57696e74657220697320636f6d696e67000000000000ab00",
+            "57696e74657220697320636f6d696e6757696e7465720000",
+            "57696e74657220697320636f6d696e6757696e746572206900000000000000cd",
+        ];
+
+        for key in keys {
+            assert_eq!(
+                roundtrip(cipher_aes, decipher_aes, message, false, key),
+                message,
+                "{key}"
+            );
+            assert_eq!(
+                roundtrip(cipher_aes, decipher_aes, b"All men must die", true, key),
+                b"All men must die",
+                "{key}"
+            );
+        }
+    }
+
+    #[test]
+    fn aes_rejects_a_key_that_would_come_back_shorter_without_oaep() {
+        // 8 trailing zero bytes: 24 bytes would come back as 16, 32 as 24.
+        let keys = [
+            "57696e74657220697320636f6d696e670000000000000000",
+            "57696e74657220697320636f6d696e6757696e74657220690000000000000000",
+        ];
+
+        for key in keys {
+            let error = cipher_aes(
+                b"All men must die",
+                true,
+                Padding::None,
+                &format!("{key}:{SUBJECT_RSA_PUBLIC}"),
+            )
+            .unwrap_err();
+            assert!(error.contains("trailing 00"), "{key}: {error}");
+
+            let (ciphered_key_hex, ciphered_message_hex) = cipher_aes(
+                b"All men must die",
+                true,
+                Padding::Oaep,
+                &format!("{key}:{OAEP_RSA_PUBLIC}"),
+            )
+            .unwrap();
+            let decipher_key = format!("{ciphered_key_hex}:{OAEP_RSA_PRIVATE}");
+            assert_eq!(
+                decipher_aes(&ciphered_message_hex, true, Padding::Oaep, &decipher_key).unwrap(),
+                b"All men must die",
+                "{key}"
+            );
+        }
     }
 
     #[test]
