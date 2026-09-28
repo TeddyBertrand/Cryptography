@@ -20,7 +20,7 @@ pub fn expand(key: &Bytes, rounds: usize) -> Result<RoundKeys> {
 
     let key_words = key.len() / 4;
     let mut words = Vec::with_capacity((rounds + 1) * 4);
-    for word in key.chunks_exact(4) {
+    for word in key.as_chunks() {
         words.push([word[0], word[1], word[2], word[3]]);
     }
 
