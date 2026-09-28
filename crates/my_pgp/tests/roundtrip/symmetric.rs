@@ -50,9 +50,8 @@ fn xor_block_roundtrips() {
         let (key, xor) = random_xor(&mut prng);
         let message = prng.bytes(key.len());
 
-        // XOR is its own inverse: deciphering a block is ciphering it again.
         let ciphertext = xor.cipher_block(&Bytes::new(message.clone())).unwrap();
-        let plaintext = xor.cipher_block(&ciphertext).unwrap();
+        let plaintext = xor.decipher_block(&ciphertext).unwrap();
 
         assert_eq!(
             *plaintext, message,

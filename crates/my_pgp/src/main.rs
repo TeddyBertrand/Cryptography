@@ -20,11 +20,7 @@ fn run_xor(command: &Command, mut message: Vec<u8>) -> Result<Vec<u8>> {
     }
 
     let output = match command.mode {
-        Mode::Cipher if command.block => {
-            let mut message = message;
-            message.reverse();
-            cipher.cipher_block(&Bytes::new(message))?
-        }
+        Mode::Cipher if command.block => cipher.cipher_block(&Bytes::new(message))?,
         Mode::Cipher => cipher.cipher(&Bytes::new(message))?,
         Mode::Decipher => {
             let encoded = std::str::from_utf8(&message)
@@ -32,9 +28,7 @@ fn run_xor(command: &Command, mut message: Vec<u8>) -> Result<Vec<u8>> {
             let ciphertext = Bytes::new(hex::decode(encoded).map_err(Error::new)?);
 
             if command.block {
-                let mut plaintext = cipher.cipher_block(&ciphertext)?.into_inner();
-                plaintext.reverse();
-                Bytes::new(plaintext)
+                cipher.decipher_block(&ciphertext)?
             } else {
                 cipher.decipher(&ciphertext)?
             }
