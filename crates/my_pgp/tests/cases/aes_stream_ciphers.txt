@@ -1,0 +1,12 @@
+== ARGS ==
+aes
+-c
+57696e74657220697320636f6d696e67
+== STDIN ==
+Winter is coming
+and the night is long
+== STDOUT ==
+332449dbf70ae8f736c8ee38ed9922e252b4e7d5e0788937e603ad8efbb820678df37d0bc3e0b46a27a1e8aa58cb8403
+== STDERR ==
+== EXIT ==
+0
