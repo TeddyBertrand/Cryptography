@@ -21,3 +21,8 @@ pgp = { path = "../pgp" }
 x25519 = { path = "../x25519" }
 sign = { path = "../sign" }
 padding = { path = "../padding" }
+
+[dev-dependencies]
+bigint = { path = "../bigint" }
+prime = { path = "../prime" }
+random = { path = "../random" }
