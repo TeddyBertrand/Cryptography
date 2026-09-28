@@ -1,0 +1,13 @@
+== ARGS ==
+xor
+-c
+-s
+5768
+c1f1-a78e
+== STDIN ==
+hi
+== STDOUT ==
+== STDERR ==
+sign: modulus too small for PKCS#1 v1.5 SHA-256
+== EXIT ==
+84
