@@ -39,7 +39,7 @@ fn run_xor(command: &Command, mut message: Vec<u8>) -> Result<Vec<u8>> {
                 cipher.decipher(&ciphertext)?
             }
         }
-        Mode::Generate { .. } | Mode::GenerateRandom { .. } => {
+        Mode::Generate { .. } | Mode::GenerateX25519 | Mode::GenerateRandom { .. } => {
             return Err(Error::new("invalid XOR mode"))
         }
     };
@@ -78,7 +78,7 @@ fn run_aes(command: &Command, mut message: Vec<u8>) -> Result<Vec<u8>> {
                 cipher.decipher(&ciphertext)?
             }
         }
-        Mode::Generate { .. } | Mode::GenerateRandom { .. } => {
+        Mode::Generate { .. } | Mode::GenerateX25519 | Mode::GenerateRandom { .. } => {
             return Err(Error::new("invalid AES mode"))
         }
     };
@@ -116,7 +116,7 @@ fn run_x25519(command: &Command, message: Vec<u8>) -> Result<Vec<u8>> {
                 .map_err(|_| Error::new("ciphertext must be UTF-8 hexadecimal text"))?;
             x25519::decipher(&hex::decode(encoded).map_err(Error::new)?, key).map_err(Error::new)
         }
-        Mode::Generate { .. } | Mode::GenerateRandom { .. } => {
+        Mode::Generate { .. } | Mode::GenerateX25519 | Mode::GenerateRandom { .. } => {
             Err(Error::new("invalid X25519 mode"))
         }
     }
@@ -142,7 +142,7 @@ fn run_rsa(command: &Command, mut message: Vec<u8>) -> Result<Vec<u8>> {
                 .map_err(|_| Error::new("ciphertext must be UTF-8 hexadecimal text"))?;
             rsa::decipher_hex(ciphertext_hex, &exponent, &n, padding).map_err(Error::new)
         }
-        Mode::Generate { .. } | Mode::GenerateRandom { .. } => {
+        Mode::Generate { .. } | Mode::GenerateX25519 | Mode::GenerateRandom { .. } => {
             unreachable!("run_command only dispatches cipher/decipher here")
         }
     }
@@ -181,7 +181,7 @@ fn run_pgp(
                 .map_err(|_| Error::new("ciphertext must be UTF-8 hexadecimal text"))?;
             decipher(ciphertext_hex, command.block, padding, key).map_err(Error::new)
         }
-        Mode::Generate { .. } | Mode::GenerateRandom { .. } => {
+        Mode::Generate { .. } | Mode::GenerateX25519 | Mode::GenerateRandom { .. } => {
             unreachable!("run_command only dispatches cipher/decipher here")
         }
     }
@@ -287,6 +287,12 @@ fn run_system(command: &Command, message: Vec<u8>) -> Result<Vec<u8>> {
 fn run_command(command: Command) -> Result<()> {
     match &command.mode {
         Mode::Generate { p, q } => print_rsa_keys(&rsa::generate(p, q).map_err(Error::new)?),
+        Mode::GenerateX25519 => {
+            let (public_key, private_key) = x25519::generate_key_pair().map_err(Error::new)?;
+            println!("public key: {}", hex::encode(&public_key));
+            println!("private key: {}", hex::encode(&private_key));
+            Ok(())
+        }
         Mode::GenerateRandom { bits } => {
             print_rsa_keys(&rsa::generate_random(*bits).map_err(Error::new)?)
         }

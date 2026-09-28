@@ -3,6 +3,7 @@ pub(crate) enum Kind {
     Flag {
         long: Option<&'static str>,
         value_names: Vec<&'static str>,
+        optional_values: bool,
     },
     Positional {
         possible_values: Vec<(&'static str, &'static str)>,
@@ -30,6 +31,7 @@ impl Arg {
             Kind::Flag {
                 long: None,
                 value_names: Vec::new(),
+                optional_values: false,
             },
         )
     }
@@ -68,6 +70,20 @@ impl Arg {
     pub fn values(mut self, names: &[&'static str]) -> Self {
         if let Kind::Flag { value_names, .. } = &mut self.kind {
             *value_names = names.to_vec();
+        }
+        self
+    }
+
+    /// Values are consumed when present, but the flag can also be used without them.
+    pub fn optional_values(mut self, names: &[&'static str]) -> Self {
+        if let Kind::Flag {
+            value_names,
+            optional_values,
+            ..
+        } = &mut self.kind
+        {
+            *value_names = names.to_vec();
+            *optional_values = true;
         }
         self
     }

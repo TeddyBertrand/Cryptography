@@ -104,7 +104,7 @@ impl Parser {
 
         let mut matches = Matches::default();
         let mut positionals = self.args.iter().filter(|a| a.is_positional());
-        let mut tokens = tokens.into_iter();
+        let mut tokens = tokens.into_iter().peekable();
 
         while let Some(token) = tokens.next() {
             if let Some(arg) = self.args.iter().find(|a| a.matches_flag(&token)) {
@@ -127,18 +127,25 @@ impl Parser {
         &self,
         arg: &Arg,
         token: String,
-        rest: &mut impl Iterator<Item = String>,
+        rest: &mut std::iter::Peekable<impl Iterator<Item = String>>,
         matches: &mut Matches,
     ) -> Result<(), Error> {
         if matches.is_present(arg.id) {
             return Err(Error::Duplicate(token));
         }
-        let names: &[&str] = match &arg.kind {
-            Kind::Flag { value_names, .. } => value_names,
-            Kind::Positional { .. } => &[],
+        let (names, optional_values): (&[&str], bool) = match &arg.kind {
+            Kind::Flag {
+                value_names,
+                optional_values,
+                ..
+            } => (value_names, *optional_values),
+            Kind::Positional { .. } => (&[], false),
         };
         let mut values = Vec::with_capacity(names.len());
         for name in names {
+            if optional_values && rest.peek().is_none_or(|value| value.starts_with('-')) {
+                break;
+            }
             let value = rest.next().ok_or_else(|| Error::MissingValue {
                 flag: token.clone(),
                 value: (*name).to_string(),
@@ -272,6 +279,16 @@ mod tests {
             Some(&["a".to_string(), "b".to_string()][..])
         );
         assert_eq!(m.value("target"), Some("t"));
+    }
+
+    #[test]
+    fn optional_flag_values_can_be_omitted() {
+        let parser = Parser::new("prog").arg(Arg::flag("pair", "-p").optional_values(&["A", "B"]));
+
+        let Parsed::Matches(matches) = parser.parse(["-p".to_string()]).unwrap() else {
+            panic!("expected matches")
+        };
+        assert_eq!(matches.values("pair"), Some(&[][..]));
     }
 
     #[test]
