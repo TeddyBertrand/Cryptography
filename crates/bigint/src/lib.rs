@@ -321,6 +321,10 @@ impl BigUint {
             return Ok(Self::zero());
         }
 
+        self.modpow_generic(exponent, modulus)
+    }
+
+    fn modpow_generic(&self, exponent: &Self, modulus: &Self) -> Result<Self, String> {
         let mut result = Self::from_u64(1);
         let mut base = self.checked_divmod(modulus)?.1;
         let mut exponent = exponent.clone();
@@ -619,21 +623,21 @@ mod tests {
         assert!(r < divisor);
     }
 
+    // xorshift64 PRNG, fixed seed: no external crate, reproducible.
+    pub(crate) fn next_u64(state: &mut u64) -> u64 {
+        *state ^= *state << 13;
+        *state ^= *state >> 7;
+        *state ^= *state << 17;
+        *state
+    }
+
+    pub(crate) fn random_biguint(state: &mut u64, limbs: usize) -> BigUint {
+        let limbs: Vec<u64> = (0..limbs).map(|_| next_u64(state)).collect();
+        BigUint::from_limbs(limbs)
+    }
+
     #[test]
     fn divmod_holds_invariant_on_seeded_random_cases() {
-        // xorshift64* PRNG, fixed seed: no external crate, reproducible.
-        fn next_u64(state: &mut u64) -> u64 {
-            *state ^= *state << 13;
-            *state ^= *state >> 7;
-            *state ^= *state << 17;
-            *state
-        }
-
-        fn random_biguint(state: &mut u64, limbs: usize) -> BigUint {
-            let limbs: Vec<u64> = (0..limbs).map(|_| next_u64(state)).collect();
-            BigUint::from_limbs(limbs)
-        }
-
         let mut state = 0x9e3779b97f4a7c15u64;
 
         for _ in 0..5000 {
