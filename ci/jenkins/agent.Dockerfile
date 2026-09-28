@@ -21,3 +21,8 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | \
         sh -s -- -y --default-toolchain stable --profile default \
     && rustup component add rustfmt clippy \
     && rustc --version && cargo --version
+
+# cargo-nextest: runs on stable and writes JUnit XML natively (unlike
+# `cargo test`'s own JSON output, which needs a nightly-only `-Z` flag).
+RUN curl -LsSf https://get.nexte.st/latest/linux | tar zxf - -C "${CARGO_HOME}/bin" \
+    && cargo nextest --version

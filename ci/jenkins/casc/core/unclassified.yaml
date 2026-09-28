@@ -1,0 +1,4 @@
+unclassified:
+  location:
+    url: "${JENKINS_URL:-http://localhost:8080}/" # internal-facing URL is fine for controller self-reference
+    adminAddress: "${JENKINS_ADMIN_EMAIL:-admin@example.invalid}"

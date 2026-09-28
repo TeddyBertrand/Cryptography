@@ -1,0 +1,14 @@
+# Unpinned: let jenkins-plugin-cli resolve the latest versions compatible
+# with each other and with the pinned controller base image (pinning exact
+# versions here caused unresolvable cross-plugin dependency conflicts, since
+# workflow-aggregator/job-dsl/git all pull in their own configuration-as-code
+# and credentials-binding floor versions).
+configuration-as-code
+job-dsl
+workflow-aggregator
+git
+github
+matrix-auth
+credentials-binding
+junit
+ws-cleanup
