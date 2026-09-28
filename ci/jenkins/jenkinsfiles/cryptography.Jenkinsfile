@@ -66,14 +66,18 @@ pipeline {
         }
         stage('Coverage') {
             steps {
-                sh 'cargo llvm-cov --workspace --cobertura --output-path target/coverage/cobertura.xml'
+                sh 'mkdir -p target/coverage && cargo llvm-cov --workspace --cobertura --output-path target/coverage/cobertura.xml'
             }
             post {
                 always {
+                    // llvm-cov emits one <method> per closure instance, so
+                    // names like `{closure#0}` repeat within a class; skip
+                    // those duplicates instead of rejecting the whole report.
                     recordCoverage(
                         tools: [[parser: 'COBERTURA', pattern: 'target/coverage/cobertura.xml']],
+                        ignoreParsingErrors: true,
                         qualityGates: [
-                            [threshold: 70.0, metric: 'LINE', baseline: 'PROJECT', unstable: true]
+                            [threshold: 70.0, metric: 'LINE', baseline: 'PROJECT', criticality: 'UNSTABLE']
                         ]
                     )
                 }
