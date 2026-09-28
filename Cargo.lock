@@ -19,10 +19,12 @@ name = "bench"
 version = "0.1.0"
 dependencies = [
  "aes",
+ "bigint",
  "core",
  "prime",
  "random",
  "rsa",
+ "x25519",
  "xor",
 ]
 

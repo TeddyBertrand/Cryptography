@@ -314,8 +314,26 @@ impl BigUint {
         (Self::from_limbs(quotient), remainder)
     }
 
-    /// Computes `self^exponent mod modulus` via square-and-multiply.
+    /// Computes `self^exponent mod modulus`. For an odd modulus (every RSA key) and an exponent
+    /// shorter than the modulus, the operation sequence depends only on the modulus length,
+    /// never on the exponent: safe for secret exponents (RSA `d`, Miller-Rabin on a secret
+    /// prime candidate).
     pub fn modpow(&self, exponent: &Self, modulus: &Self) -> Result<Self, String> {
+        self.modpow_with(exponent, modulus, Self::modpow_montgomery)
+    }
+
+    /// Faster [`BigUint::modpow`] whose run time depends on the exponent's bits. Only for
+    /// public exponents (RSA `e`, signature verification): it would leak a secret one.
+    pub fn modpow_vartime(&self, exponent: &Self, modulus: &Self) -> Result<Self, String> {
+        self.modpow_with(exponent, modulus, Self::modpow_montgomery_vartime)
+    }
+
+    fn modpow_with(
+        &self,
+        exponent: &Self,
+        modulus: &Self,
+        montgomery: fn(&Self, &Self, &Self) -> Result<Self, String>,
+    ) -> Result<Self, String> {
         if modulus.is_zero() {
             return Err("modulus must not be zero".to_string());
         }
@@ -324,7 +342,7 @@ impl BigUint {
         }
 
         if modulus.limbs[0] & 1 == 1 {
-            self.modpow_montgomery(exponent, modulus)
+            montgomery(self, exponent, modulus)
         } else {
             self.modpow_generic(exponent, modulus)
         }
@@ -336,8 +354,55 @@ impl BigUint {
             .is_some_and(|limb| (limb >> (index % 64)) & 1 == 1)
     }
 
-    /// Sliding-window exponentiation in Montgomery form; `modulus` must be odd and > 1.
+    /// Fixed-window exponentiation in Montgomery form; `modulus` must be odd and > 1.
+    ///
+    /// Every window costs `window` squarings plus one multiplication, even when its bits are
+    /// zero, and its table entry is read with a masked scan of the whole table, so neither the
+    /// branches nor the memory accesses depend on the exponent's bits. Leading zero windows are
+    /// processed up to the modulus length, so the exponent's own length doesn't show either.
     fn modpow_montgomery(&self, exponent: &Self, modulus: &Self) -> Result<Self, String> {
+        let mont = montgomery::Montgomery::new(modulus);
+        let base = mont.to_mont(&self.checked_divmod(modulus)?.1);
+
+        let bits = exponent.bits().max(modulus.bits());
+        let window = match bits {
+            b if b > 1024 => 6,
+            b if b > 512 => 5,
+            b if b > 128 => 4,
+            b if b > 32 => 3,
+            _ => 1,
+        };
+
+        let mut powers = Vec::with_capacity(1 << window);
+        powers.push(mont.one());
+        powers.push(base);
+        for index in 2..(1 << window) {
+            let next = mont.mul(&powers[index - 1], &powers[1]);
+            powers.push(next);
+        }
+
+        let mut acc = mont.one();
+        let mut scratch = Vec::new();
+        let mut entry = Vec::new();
+        for chunk in (0..bits.div_ceil(window)).rev() {
+            let mut value = 0usize;
+            for position in (chunk * window..(chunk + 1) * window).rev() {
+                mont.square_into(&acc, &mut scratch);
+                std::mem::swap(&mut acc, &mut scratch);
+                value = (value << 1) | exponent.bit(position) as usize;
+            }
+            montgomery::select(&powers, value, &mut entry);
+            mont.mul_into(&acc, &entry, &mut scratch);
+            std::mem::swap(&mut acc, &mut scratch);
+        }
+
+        Ok(mont.out_of_mont(&acc))
+    }
+
+    /// Sliding-window exponentiation in Montgomery form; `modulus` must be odd and > 1.
+    /// Skips zero bits and only multiplies on windows ending in a one bit, so the number of
+    /// multiplications follows the exponent's bits.
+    fn modpow_montgomery_vartime(&self, exponent: &Self, modulus: &Self) -> Result<Self, String> {
         let mont = montgomery::Montgomery::new(modulus);
         let base = mont.to_mont(&self.checked_divmod(modulus)?.1);
 
@@ -738,10 +803,14 @@ mod tests {
 
         for (base, exponent, modulus) in cases {
             let expected = naive_modpow(base, exponent, modulus);
-            let actual = BigUint::from_u64(base)
-                .modpow(&BigUint::from_u64(exponent), &BigUint::from_u64(modulus))
-                .unwrap();
-            assert_eq!(actual, BigUint::from_u64(expected));
+            let (base, exponent, modulus) = (
+                BigUint::from_u64(base),
+                BigUint::from_u64(exponent),
+                BigUint::from_u64(modulus),
+            );
+            let expected = BigUint::from_u64(expected);
+            assert_eq!(base.modpow(&exponent, &modulus).unwrap(), expected);
+            assert_eq!(base.modpow_vartime(&exponent, &modulus).unwrap(), expected);
         }
     }
 
@@ -749,6 +818,9 @@ mod tests {
     fn modpow_rejects_zero_modulus() {
         assert!(BigUint::from_u64(2)
             .modpow(&BigUint::from_u64(3), &BigUint::zero())
+            .is_err());
+        assert!(BigUint::from_u64(2)
+            .modpow_vartime(&BigUint::from_u64(3), &BigUint::zero())
             .is_err());
     }
 
@@ -773,14 +845,23 @@ mod tests {
                 &modulus - &one,
                 random_biguint(&mut state, 1),
                 random_biguint(&mut state, limbs),
+                // Sparse exponents: almost every window is zero.
+                one.shl(64 * limbs - 1),
+                &one.shl(64 * limbs - 1) + &one,
             ];
 
             for exponent in &exponents {
                 let base = random_biguint(&mut state, limbs + 1);
+                let expected = base.modpow_generic(exponent, &modulus).unwrap();
                 assert_eq!(
                     base.modpow(exponent, &modulus).unwrap(),
-                    base.modpow_generic(exponent, &modulus).unwrap(),
+                    expected,
                     "mismatch for {limbs}-limb modulus"
+                );
+                assert_eq!(
+                    base.modpow_vartime(exponent, &modulus).unwrap(),
+                    expected,
+                    "vartime mismatch for {limbs}-limb modulus"
                 );
             }
         }
@@ -815,13 +896,28 @@ mod tests {
         let generic_time = best(&|| {
             base.modpow_generic(&exponent, &modulus).unwrap();
         });
-        let fast_time = best(&|| {
+        let vartime_time = best(&|| {
+            base.modpow_vartime(&exponent, &modulus).unwrap();
+        });
+        // Constant time costs a multiplication on every window and a full table scan.
+        let constant_time = best(&|| {
             base.modpow(&exponent, &modulus).unwrap();
         });
 
-        let speedup = generic_time.as_secs_f64() / fast_time.as_secs_f64();
-        println!("generic {generic_time:?}, montgomery {fast_time:?}, speedup {speedup:.2}x");
-        assert!(speedup >= 2.5, "speedup {speedup:.2}x below 2.5x");
+        let speedup = |time: std::time::Duration| generic_time.as_secs_f64() / time.as_secs_f64();
+        let (vartime_speedup, constant_speedup) = (speedup(vartime_time), speedup(constant_time));
+        println!(
+            "generic {generic_time:?}, vartime {vartime_time:?} ({vartime_speedup:.2}x), \
+             constant-time {constant_time:?} ({constant_speedup:.2}x)"
+        );
+        assert!(
+            vartime_speedup >= 2.5,
+            "vartime speedup {vartime_speedup:.2}x below 2.5x"
+        );
+        assert!(
+            constant_speedup >= 2.2,
+            "constant-time speedup {constant_speedup:.2}x below 2.2x"
+        );
     }
 
     #[test]

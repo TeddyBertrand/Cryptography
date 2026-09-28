@@ -35,9 +35,8 @@ impl FieldElement {
         let mut limbs = [0; LIMB_COUNT];
 
         for bit in 0..255 {
-            if bytes[bit / 8] & (1 << (bit % 8)) != 0 {
-                limbs[bit / LIMB_BITS as usize] |= 1 << (bit % LIMB_BITS as usize);
-            }
+            let value = u64::from((bytes[bit / 8] >> (bit % 8)) & 1);
+            limbs[bit / LIMB_BITS as usize] |= value << (bit % LIMB_BITS as usize);
         }
 
         Self { limbs }
@@ -48,9 +47,8 @@ impl FieldElement {
         let mut bytes = [0; 32];
 
         for bit in 0..255 {
-            if value.limbs[bit / LIMB_BITS as usize] & (1 << (bit % LIMB_BITS as usize)) != 0 {
-                bytes[bit / 8] |= 1 << (bit % 8);
-            }
+            let set = (value.limbs[bit / LIMB_BITS as usize] >> (bit % LIMB_BITS as usize)) & 1;
+            bytes[bit / 8] |= (set as u8) << (bit % 8);
         }
 
         bytes
@@ -60,6 +58,7 @@ impl FieldElement {
         self * self
     }
 
+    /// Fermat inversion `self^(p - 2)`; branches on the bits of the public exponent only.
     pub fn invert(self) -> Self {
         let mut result = Self::one();
 
@@ -103,24 +102,24 @@ impl FieldElement {
         *self = Self::from_wide(self.limbs.map(u128::from));
     }
 
+    /// Subtracts `p` once if the value is `>= p`, selecting with a mask instead of a branch
+    /// since the value can be a secret (a shared secret about to be serialized).
     fn canonical(mut self) -> Self {
         self.reduce();
         let mut reduced = [0; LIMB_COUNT];
-        let mut borrow = 0_i128;
+        let mut borrow = 0_u64;
 
         for index in 0..LIMB_COUNT {
-            let value = i128::from(self.limbs[index]) - i128::from(MODULUS[index]) - borrow;
-            if value < 0 {
-                reduced[index] = (value + (1_i128 << LIMB_BITS)) as u64;
-                borrow = 1;
-            } else {
-                reduced[index] = value as u64;
-                borrow = 0;
-            }
+            let value = self.limbs[index]
+                .wrapping_sub(MODULUS[index])
+                .wrapping_sub(borrow);
+            borrow = value >> 63;
+            reduced[index] = value & LIMB_MASK;
         }
 
-        if borrow == 0 {
-            self.limbs = reduced;
+        let keep = 0_u64.wrapping_sub(borrow);
+        for (limb, reduced) in self.limbs.iter_mut().zip(reduced) {
+            *limb = (*limb & keep) | (reduced & !keep);
         }
         self
     }
@@ -179,6 +178,27 @@ mod tests {
         bytes[0] = 42;
 
         assert_eq!(FieldElement::from_bytes(bytes).to_bytes(), bytes);
+    }
+
+    #[test]
+    fn serializes_values_at_or_above_the_modulus_canonically() {
+        let mut p_plus_five = MODULUS;
+        p_plus_five[0] += 5;
+        let mut p_minus_one = MODULUS;
+        p_minus_one[0] -= 1;
+        let mut expected_p_minus_one = [0xff; 32];
+        expected_p_minus_one[0] = 0xec;
+        expected_p_minus_one[31] = 0x7f;
+
+        assert_eq!(FieldElement::from_limbs(MODULUS).to_bytes(), [0; 32]);
+        assert_eq!(
+            FieldElement::from_limbs(p_plus_five).to_bytes()[..2],
+            [5, 0]
+        );
+        assert_eq!(
+            FieldElement::from_limbs(p_minus_one).to_bytes(),
+            expected_p_minus_one
+        );
     }
 
     #[test]

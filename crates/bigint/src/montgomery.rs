@@ -144,18 +144,28 @@ impl Montgomery {
     }
 
     /// Maps a `k + 1`-limb value `t < 2n` to `t mod n` in `k` limbs.
+    ///
+    /// Always runs a full trial subtraction then a masked one, so whether the extra reduction
+    /// happened (the classic Montgomery timing leak) doesn't show in branches or run time.
     fn subtract_if_needed(&self, t: &mut Vec<u64>) {
         let n = &self.modulus;
         let k = n.len();
 
-        if t[k] != 0 || !less_than(&t[..k], n) {
-            let mut borrow = false;
-            for (t_j, &n_j) in t.iter_mut().zip(n) {
-                let (diff, borrow1) = t_j.overflowing_sub(n_j);
-                let (diff, borrow2) = diff.overflowing_sub(borrow as u64);
-                *t_j = diff;
-                borrow = borrow1 || borrow2;
-            }
+        let mut borrow = 0u64;
+        for (&t_j, &n_j) in t.iter().zip(n) {
+            let (diff, borrow1) = t_j.overflowing_sub(n_j);
+            let (_, borrow2) = diff.overflowing_sub(borrow);
+            borrow = (borrow1 | borrow2) as u64;
+        }
+        // `t >= n` when the top limb is set or the low limbs didn't borrow.
+        let mask = 0u64.wrapping_sub(((t[k] != 0) as u64) | (borrow ^ 1));
+
+        let mut borrow = 0u64;
+        for (t_j, &n_j) in t.iter_mut().zip(n) {
+            let (diff, borrow1) = t_j.overflowing_sub(n_j & mask);
+            let (diff, borrow2) = diff.overflowing_sub(borrow);
+            *t_j = diff;
+            borrow = (borrow1 | borrow2) as u64;
         }
 
         t.truncate(k);
@@ -191,13 +201,23 @@ fn pad(limbs: &[u64], k: usize) -> Vec<u64> {
     padded
 }
 
-fn less_than(a: &[u64], b: &[u64]) -> bool {
-    a.iter().rev().lt(b.iter().rev())
+/// Copies `table[index]` into `out` by OR-ing every entry under a mask, so the memory access
+/// pattern is the same whatever `index` is. Entries are `k`-limb Montgomery values.
+pub(crate) fn select(table: &[Vec<u64>], index: usize, out: &mut Vec<u64>) {
+    let limbs = reset(out, table[0].len());
+    for (position, entry) in table.iter().enumerate() {
+        // Opaque to the optimizer: seeing a 0/all-ones mask, LLVM rebuilds `if position ==
+        // index` and the branch predictor then leaks the exponent (`bench --bin timing`).
+        let mask = std::hint::black_box(0u64.wrapping_sub((position == index) as u64));
+        for (limb, &value) in limbs.iter_mut().zip(entry) {
+            *limb |= value & mask;
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::Montgomery;
+    use super::{select, Montgomery};
     use crate::tests::{next_u64, random_biguint, random_odd_modulus};
     use crate::BigUint;
 
@@ -242,6 +262,16 @@ mod tests {
             }
             let max = mont.to_mont(&(&n - &BigUint::from_u64(1)));
             assert_eq!(mont.square(&max), mont.mul(&max, &max));
+        }
+    }
+
+    #[test]
+    fn select_copies_only_the_chosen_entry() {
+        let table: Vec<Vec<u64>> = (0..8u64).map(|i| vec![i, i << 32, !i]).collect();
+        let mut out = vec![u64::MAX; 5];
+        for (index, entry) in table.iter().enumerate() {
+            select(&table, index, &mut out);
+            assert_eq!(&out, entry);
         }
     }
 

@@ -62,3 +62,9 @@ All men must die
 ```
 
 The signing modulus must be at least 62 bytes (e.g. `rsa --bits 512`); the subject's 512-bit keys work. Without `-s`, the output is unchanged.
+
+## Constant-time primitives
+
+RSA with the private exponent, AES and X25519 run in constant time with respect to their secrets: no branches on secret bits, no memory accesses indexed by secrets. RSA with the public exponent uses a faster variable-time path.
+
+To measure it, run `cargo run --release --bin timing`. For each primitive, it times a fixed secret against random secrets and runs a Welch t-test: `|t| > 4.5` means a leak. [docs/constant-time-audit.md](docs/constant-time-audit.md) covers the audit, the before/after measurements and the leaks that remain.
