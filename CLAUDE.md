@@ -97,7 +97,10 @@ Dev shell via `flake.nix` — CI's `build-test-lint` and `retrocompat` jobs run 
 - Release-only checks (bigint/prime timing, 1024-bit RSA roundtrip budget): `cargo test --workspace --release -- --include-ignored`
 - Lint: `cargo clippy --workspace --all-targets -- -D warnings` — pre-commit hook and CI omit `--all-targets`, so lint in `#[cfg(test)]` code slips through them; run it yourself
 - Format check: `cargo fmt --all -- --check`
-- Hooks: `pre-commit install --hook-type commit-msg --hook-type pre-commit`; commit from inside `nix develop` or hooks fail with `'cargo': No such file or directory`
+- Hooks: `pre-commit install --hook-type commit-msg --hook-type pre-commit`; commit from inside `nix develop` or hooks fail with `'cargo': No such file or directory`. `gh` also comes from the dev shell.
+- Delivery tree: `sh scripts/check_delivery.sh` — fails on tracked build outputs, temp files, `.env`, binaries, files > 512 KiB and missing Makefile rules (CI `delivery` job, Jenkins `Delivery tree` stage). Intentional binaries go in its `ALLOWED` list (only the subject PDF today).
+- Bench / constant-time check: `cargo run --release --bin bench [samples]`, `cargo run --release --bin timing [measurements]`. Re-run `timing` after touching secret-dependent code: LLVM can turn masks back into branches (hence `std::hint::black_box` in `bigint::montgomery::select`).
+- Jenkins: `sh ci/jenkins/tests/project/jenkinsfile-lint.sh` validates Jenkinsfiles against the running local controller (needs `ci/jenkins/.env`). `ci/jenkins/tests/run-all.sh` builds a fresh stack and ends with `docker compose down -v`, wiping the local Jenkins volumes. A CI check change goes in both `.github/workflows/ci.yml` and `ci/jenkins/jenkinsfiles/cryptography.Jenkinsfile`, plus the parity table in `ci/jenkins/README.md`.
 
 ## Testing layout
 
@@ -109,6 +112,11 @@ Dev shell via `flake.nix` — CI's `build-test-lint` and `retrocompat` jobs run 
 ## Behavior notes
 
 - Any error → message on stderr, exit `core::EXIT_CODE` (84).
+- Byte order: every CLI number/key/ciphertext is little-endian hex (`encoding`). AES converts per 32-bit word (`aes::reverse_words`); OAEP and signature blocks are big-endian per RFC 8017 and get reversed at the `BigUint` boundary.
+- I/O: one trailing `\n` (or `\r\n`) is stripped from stdin; one-line outputs end with `\n`.
+- XOR/AES stream mode zero-pads and deciphering strips trailing zero bytes, so messages ending in `\0` don't round-trip; property tests compare through `without_trailing_zeros`.
+- Minimum modulus: `-p` (OAEP) needs ≥ 66 bytes, `-s` ≥ 62 bytes. The subject's 512-bit keys fail `-p`; test with `rsa --bits 1024` keys.
+- Bonuses live in the main binary; there is no `bonus/` directory (README "Delivery" section).
 - Bonus flags (e.g. `rsa --bits N`) stay out of `-h` so help matches the subject's, whose only addition is the `X25519` line (`tests/cases/help.txt`). Document bonuses in README instead.
 - `X25519 -g` prints a random key pair; `-c <public>` / `-d <private>` output/input hex `ephemeral_public || nonce || ciphertext || tag`, tag checked before deciphering. The subject's X25519 example keys are an Ed25519 pair and don't round-trip yet (#130, skipped case `subject_x25519_roundtrips.txt`).
 - `-s` takes an extra hidden `sign_key` positional (signer `d-n` on `-c`, verifier `e-n` on `-d`); signature is appended as the last output line and covers the ciphered output as printed (both lines for `pgp-*`).
