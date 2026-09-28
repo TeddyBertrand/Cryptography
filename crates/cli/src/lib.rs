@@ -100,6 +100,7 @@ Cipher or decipher MESSAGE using a given CRYPTO_SYSTEM. The MESSAGE is read from
      CRYPTO_SYSTEM
         \"xor\"            computation using XOR algorithm
         \"aes\"            computation using AES algorithm
+        \"X25519\"         computation using X25519 algorithm
         \"rsa\"            computation using RSA algorithm
         \"pgp-xor\"        computation using both RSA and XOR algorithm
         \"pgp-aes\"        computation using both RSA and AES algorithm
@@ -152,6 +153,14 @@ Cipher or decipher MESSAGE using a given CRYPTO_SYSTEM. The MESSAGE is read from
         assert_eq!(cmd.system, CryptoSystem::Aes);
         assert_eq!(cmd.mode, Mode::Decipher);
         assert!(!cmd.block);
+    }
+
+    #[test]
+    fn parses_x25519() {
+        assert_eq!(
+            command(&["X25519", "-c", "00"]).system,
+            CryptoSystem::X25519
+        );
     }
 
     #[test]

@@ -101,6 +101,27 @@ fn rsa_padding(command: &Command) -> rsa::Padding {
     }
 }
 
+fn run_x25519(command: &Command, message: Vec<u8>) -> Result<Vec<u8>> {
+    let key = command
+        .key
+        .as_deref()
+        .ok_or_else(|| Error::new("missing key"))?;
+
+    match command.mode {
+        Mode::Cipher => {
+            Ok(hex::encode(&x25519::cipher(&message, key).map_err(Error::new)?).into_bytes())
+        }
+        Mode::Decipher => {
+            let encoded = std::str::from_utf8(&message)
+                .map_err(|_| Error::new("ciphertext must be UTF-8 hexadecimal text"))?;
+            x25519::decipher(&hex::decode(encoded).map_err(Error::new)?, key).map_err(Error::new)
+        }
+        Mode::Generate { .. } | Mode::GenerateRandom { .. } => {
+            Err(Error::new("invalid X25519 mode"))
+        }
+    }
+}
+
 fn run_rsa(command: &Command, mut message: Vec<u8>) -> Result<Vec<u8>> {
     let padding = rsa_padding(command);
     let key = command
@@ -222,7 +243,9 @@ fn signed_payload(command: &Command, message: &[u8]) -> Result<Vec<u8>> {
             let (ciphered_key, _) = pgp::split_key(key).map_err(Error::new)?;
             Ok([ciphered_key.as_bytes(), b"\n", message].concat())
         }
-        CryptoSystem::Xor | CryptoSystem::Aes | CryptoSystem::Rsa => Ok(message.to_vec()),
+        CryptoSystem::Xor | CryptoSystem::Aes | CryptoSystem::X25519 | CryptoSystem::Rsa => {
+            Ok(message.to_vec())
+        }
     }
 }
 
@@ -248,6 +271,7 @@ fn run_system(command: &Command, message: Vec<u8>) -> Result<Vec<u8>> {
     match command.system {
         CryptoSystem::Xor => run_xor(command, message),
         CryptoSystem::Aes => run_aes(command, message),
+        CryptoSystem::X25519 => run_x25519(command, message),
         CryptoSystem::Rsa => run_rsa(command, message),
         CryptoSystem::PgpXor => run_pgp(command, message, true, pgp::cipher_xor, pgp::decipher_xor),
         CryptoSystem::PgpAes => run_pgp(
