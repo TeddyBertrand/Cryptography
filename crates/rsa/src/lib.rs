@@ -40,6 +40,8 @@ pub fn cipher_hex(message: &[u8], e: &BigUint, n: &BigUint) -> Result<String, St
 pub fn decipher_hex(ciphertext_hex: &str, d: &BigUint, n: &BigUint) -> Result<Vec<u8>, String> {
     let ciphertext = BigUint::from_hex(ciphertext_hex)?;
     decipher(&ciphertext, d, n)
+}
+
 /// Candidate public exponents, largest Fermat prime first.
 const FERMAT_PRIMES: [u64; 5] = [65537, 257, 17, 5, 3];
 
@@ -181,6 +183,9 @@ mod tests {
 
         let plaintext = decipher_hex(&ciphertext_hex, &d, &n).unwrap();
         assert_eq!(plaintext, b"WF");
+    }
+
+    #[test]
     fn computes_n_and_lambda_for_small_primes() {
         let p = BigUint::from_u64(5);
         let q = BigUint::from_u64(11);

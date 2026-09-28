@@ -70,6 +70,8 @@ fn run_rsa(command: Command) -> Result<()> {
         }
         Mode::Generate { .. } => unreachable!("run_command only dispatches cipher/decipher here"),
     }
+}
+
 fn run_rsa_generate(p: &str, q: &str) -> Result<()> {
     let keys = rsa::generate(p, q).map_err(Error::new)?;
 
@@ -100,9 +102,7 @@ fn run_command(command: Command) -> Result<()> {
         CryptoSystem::Xor => run_xor(command),
         CryptoSystem::Rsa => match command.mode {
             Mode::Cipher | Mode::Decipher => run_rsa(command),
-            Mode::Generate { .. } => Err(Error::new("crypto system is not implemented")),
             Mode::Generate { p, q } => run_rsa_generate(&p, &q),
-            Mode::Cipher | Mode::Decipher => Err(Error::new("crypto system is not implemented")),
         },
         CryptoSystem::Aes | CryptoSystem::PgpXor | CryptoSystem::PgpAes => {
             Err(Error::new("crypto system is not implemented"))
