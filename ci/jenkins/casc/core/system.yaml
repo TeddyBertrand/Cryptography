@@ -1,0 +1,5 @@
+jenkins:
+  systemMessage: "Managed by JCasC — see ci/jenkins/casc/. Do not edit via UI."
+  numExecutors: 0
+  mode: EXCLUSIVE
+  quietPeriod: 5

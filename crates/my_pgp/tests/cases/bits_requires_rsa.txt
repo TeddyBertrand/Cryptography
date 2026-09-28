@@ -1,0 +1,10 @@
+== ARGS ==
+xor
+--bits
+64
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+'--bits' is only available with rsa
+== EXIT ==
+84

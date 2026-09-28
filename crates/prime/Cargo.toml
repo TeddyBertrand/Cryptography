@@ -1,0 +1,11 @@
+[package]
+name = "prime"
+version.workspace = true
+edition.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+bigint = { path = "../bigint" }
+random = { path = "../random" }

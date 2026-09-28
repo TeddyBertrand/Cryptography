@@ -1,0 +1,12 @@
+jenkins:
+  nodes:
+    - permanent:
+        name: "rust-agent"
+        labelString: "rust-agent"
+        remoteFS: "/home/jenkins/agent"
+        numExecutors: 1
+        mode: EXCLUSIVE
+        launcher:
+          inbound:
+            workDirSettings:
+              disabled: false

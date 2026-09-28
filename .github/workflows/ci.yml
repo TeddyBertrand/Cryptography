@@ -35,6 +35,63 @@ jobs:
       - name: Clippy
         run: nix develop -c cargo clippy --workspace -- -D warnings
 
+  # Every subject example and bonus flag combination, run against the real
+  # binary (crates/my_pgp/tests/cases). Own job so it is a required check of
+  # its own: a bonus must never break an earlier example.
+  retrocompat:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: cachix/install-nix-action@v31
+        with:
+          nix_path: nixpkgs=channel:nixpkgs-unstable
+
+      - name: Cache cargo
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Retrocompatibility suite
+        run: nix develop -c cargo test -p my_pgp --test functional
+
+  # The Epitech dump and the org mirror receive every tracked file: no build
+  # outputs, temp files, secrets, binaries or large files, and the Makefile
+  # rules the subject requires. Needs only git, make and awk, so no Nix.
+  delivery:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Delivery tree
+        run: sh scripts/check_delivery.sh
+
+  epitest-dump:
+    runs-on: ubuntu-latest
+    container: epitechcontent/epitest-docker:latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build (make re)
+        run: make re
+
+      - name: Delivery check
+        run: |
+          test -x ./my_pgp
+          ./my_pgp -h
+
+      - name: Functional suite
+        run: cargo test --workspace
+
+      # Release build + ignored timing checks (bigint/prime) and the
+      # 1024-bit RSA roundtrip budget, which only hold in release.
+      - name: Release suite
+        run: cargo test --workspace --release -- --include-ignored
+
   # Opt-in for cross-platform / sanitizer coverage once the project actually
   # needs it -- off by default to keep CI fast for solo use. These are sibling
   # jobs, not steps of build-test-lint above.

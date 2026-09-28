@@ -1,0 +1,79 @@
+services:
+  jenkins:
+    # Base image pinned in controller.Dockerfile: jenkins/jenkins:2.568.3-lts-jdk21
+    build:
+      context: .
+      dockerfile: controller.Dockerfile
+    container_name: jenkins-controller
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    environment:
+      - JENKINS_ADMIN_ID=${JENKINS_ADMIN_ID:-admin}
+      - JENKINS_ADMIN_PASSWORD=${JENKINS_ADMIN_PASSWORD}
+      - JENKINS_URL=${JENKINS_EXTERNAL_URL:-http://localhost:8080}
+      - JENKINS_ADMIN_EMAIL=${JENKINS_ADMIN_EMAIL:-admin@example.invalid}
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL:-}
+    volumes:
+      - jenkins_home:/var/jenkins_home
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/login"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+
+  rust-agent:
+    build:
+      context: .
+      dockerfile: agent.Dockerfile
+    container_name: jenkins-rust-agent
+    restart: unless-stopped
+    depends_on:
+      jenkins:
+        condition: service_healthy
+    environment:
+      - JENKINS_URL=${JENKINS_URL:-http://jenkins:8080}
+      - JENKINS_AGENT_NAME=${JENKINS_AGENT_NAME:-rust-agent}
+      - JENKINS_SECRET=${JENKINS_AGENT_SECRET}
+    # Host Docker daemon for `agent { docker { ... } }` stages. The workspace
+    # lives in a volume so docker-workflow can share it via --volumes-from.
+    group_add:
+      - "${DOCKER_GID:-999}"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - rust_agent_workspace:/home/jenkins/agent
+    entrypoint:
+      - sh
+      - -c
+      # $$ escapes compose's own interpolation, so the shell (not compose)
+      # expands these from the container's environment at runtime.
+      - >
+        java -jar /usr/share/jenkins/agent.jar
+        -url "$$JENKINS_URL"
+        -name "$$JENKINS_AGENT_NAME"
+        -secret "$$JENKINS_SECRET"
+        -workDir "/home/jenkins/agent"
+
+  smee-client:
+    image: node:lts-alpine
+    container_name: jenkins-smee-client
+    restart: unless-stopped
+    depends_on:
+      jenkins:
+        condition: service_healthy
+    environment:
+      - WEBHOOK_PROXY_URL=${WEBHOOK_PROXY_URL}
+    command:
+      - sh
+      - -c
+      # $$ escapes compose's own interpolation (see rust-agent entrypoint).
+      - >
+        npx --yes smee-client
+        --url "$$WEBHOOK_PROXY_URL"
+        --target http://jenkins:8080/github-webhook/
+
+volumes:
+  jenkins_home:
+  rust_agent_workspace:

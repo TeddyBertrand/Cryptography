@@ -1,0 +1,11 @@
+== ARGS ==
+pgp-xor
+-c
+4100:010001-c9f91a9ff3bd6d84005b9cc8448296330bd23480f8cf8b36fd4edd0a8cd925de139a0076b962f4d57f50d6f9e64e7c41587784488f923dd60136c763fd602fb3
+== STDIN ==
+hello
+== STDOUT ==
+== STDERR ==
+pgp: textbook RSA drops the symmetric key's trailing 00 bytes, so this key can't be recovered when deciphering; use another key or -p
+== EXIT ==
+84

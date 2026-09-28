@@ -1,0 +1,103 @@
+use argparse::{Arg, Group, Layout, Parser};
+
+pub const SYSTEM: &str = "system";
+pub const MODE: &str = "mode";
+pub const CIPHER: &str = "cipher";
+pub const DECIPHER: &str = "decipher";
+pub const GENERATE: &str = "generate";
+pub const BITS: &str = "bits";
+pub const BLOCK: &str = "block";
+pub const PADDING: &str = "padding";
+pub const SIGN: &str = "sign";
+pub const KEY: &str = "key";
+pub const SIGN_KEY: &str = "sign_key";
+
+pub fn parser() -> Parser {
+    Parser::new("./my_pgp")
+        .usage("CRYPTO_SYSTEM MODE [OPTIONS] [key]")
+        .help_on_empty(true)
+        .about(
+            "Cipher or decipher MESSAGE using a given CRYPTO_SYSTEM. \
+             The MESSAGE is read from the standard input.",
+        )
+        .layout(Layout {
+            usage_indent: 6,
+            section_indent: 5,
+            entry_indent: 8,
+            label_width: 16,
+            inline_width: 18,
+            quote_values: true,
+        })
+        .arg(
+            Arg::positional(SYSTEM, "CRYPTO_SYSTEM")
+                .required(true)
+                .possible_value("xor", "computation using XOR algorithm")
+                .possible_value("aes", "computation using AES algorithm")
+                .possible_value("X25519", "computation using X25519 algorithm")
+                .possible_value("rsa", "computation using RSA algorithm")
+                .possible_value("pgp-xor", "computation using both RSA and XOR algorithm")
+                .possible_value("pgp-aes", "computation using both RSA and AES algorithm"),
+        )
+        .group(Group::new(MODE).required(true))
+        .arg(
+            Arg::flag(CIPHER, "-c")
+                .section("MODE")
+                .group(MODE)
+                .help("MESSAGE is clear and we want to cipher it"),
+        )
+        .arg(
+            Arg::flag(DECIPHER, "-d")
+                .section("MODE")
+                .group(MODE)
+                .help("MESSAGE is ciphered and we want to decipher it"),
+        )
+        .arg(
+            Arg::flag(GENERATE, "-g")
+                .optional_values(&["P", "Q"])
+                .section("MODE")
+                .group(MODE)
+                .help(
+                    "RSA only: don't read a MESSAGE, but instead generate a public and private key\n\
+                     pair from the prime number P and Q",
+                ),
+        )
+        .arg(
+            Arg::flag(BITS, "--bits")
+                .values(&["N"])
+                .section("MODE")
+                .group(MODE)
+                .hidden(true)
+                .help("RSA only: generate a key pair with an N-bit modulus from random primes"),
+        )
+        .arg(
+            Arg::flag(BLOCK, "-b").section("OPTIONS").help(
+                "for XOR, AES and PGP, only works on one block. The MESSAGE and the symmetric\n\
+                 key must be the same size",
+            ),
+        )
+        .arg(
+            Arg::flag(PADDING, "-p")
+                .section("OPTIONS")
+                .hidden(true)
+                .help("for RSA and PGP, pad the RSA input with OAEP (SHA-256/MGF1)"),
+        )
+        .arg(
+            Arg::flag(SIGN, "-s")
+                .section("OPTIONS")
+                .hidden(true)
+                .help("sign the ciphered MESSAGE with sign_key, or verify it when deciphering"),
+        )
+        .arg(
+            Arg::positional(KEY, "key")
+                .conflicts_with(GENERATE)
+                .conflicts_with(BITS)
+                .help("Key used to cipher/decipher MESSAGE (incompatible with -g MODE)"),
+        )
+        .arg(
+            Arg::positional(SIGN_KEY, "sign_key")
+                .conflicts_with(GENERATE)
+                .conflicts_with(BITS)
+                .hidden(true)
+                .help("RSA key used to sign (private) or verify (public) the ciphered MESSAGE"),
+        )
+}

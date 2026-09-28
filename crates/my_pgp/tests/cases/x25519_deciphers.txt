@@ -1,0 +1,12 @@
+== ARGS ==
+X25519
+-d
+4ccd089b28ff96da9db6c346ec114e0f5b8a319f35aba624da8cf6ed4fb8a6fb
+== STDIN ==
+1b9d23993fea8f8799df30b71a460dfcdb97f0b0c7d17b473b14fec36865771cc42b2b6e9311bd8bf8547d66508ad0d0ddc66740ad9eed4d6da776c07b9426093a51ed37eab368667369b721a5b7646d7d9d7952c5c03f5e235334bfc811924eb88b79d78ae65e48b6cf0f936e014554eb0f23f2400bed
+== STDOUT ==
+Winter is coming
+and the night is long
+== STDERR ==
+== EXIT ==
+0
