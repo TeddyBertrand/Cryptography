@@ -34,7 +34,9 @@ fn run_xor(command: Command) -> Result<()> {
                 cipher.decipher(&ciphertext)?
             }
         }
-        Mode::Generate { .. } => return Err(Error::new("invalid XOR mode")),
+        Mode::Generate { .. } | Mode::GenerateRandom { .. } => {
+            return Err(Error::new("invalid XOR mode"))
+        }
     };
 
     if encrypting {
@@ -68,7 +70,9 @@ fn run_rsa(command: Command) -> Result<()> {
                 .write_all(&plaintext)
                 .map_err(|err| Error::new(format!("failed to write standard output: {err}")))
         }
-        Mode::Generate { .. } => unreachable!("run_command only dispatches cipher/decipher here"),
+        Mode::Generate { .. } | Mode::GenerateRandom { .. } => {
+            unreachable!("run_command only dispatches cipher/decipher here")
+        }
     }
 }
 
@@ -93,13 +97,13 @@ fn run_pgp_xor(command: Command) -> Result<()> {
                 .write_all(&plaintext)
                 .map_err(|err| Error::new(format!("failed to write standard output: {err}")))
         }
-        Mode::Generate { .. } => unreachable!("run_command only dispatches cipher/decipher here"),
+        Mode::Generate { .. } | Mode::GenerateRandom { .. } => {
+            unreachable!("run_command only dispatches cipher/decipher here")
+        }
     }
 }
 
-fn run_rsa_generate(p: &str, q: &str) -> Result<()> {
-    let keys = rsa::generate(p, q).map_err(Error::new)?;
-
+fn print_rsa_keys(keys: &rsa::KeyPair) -> Result<()> {
     println!("public key: {}", keys.public_key());
     println!("private key: {}", keys.private_key());
 
@@ -127,11 +131,16 @@ fn run_command(command: Command) -> Result<()> {
         CryptoSystem::Xor => run_xor(command),
         CryptoSystem::Rsa => match command.mode {
             Mode::Cipher | Mode::Decipher => run_rsa(command),
-            Mode::Generate { p, q } => run_rsa_generate(&p, &q),
+            Mode::Generate { p, q } => print_rsa_keys(&rsa::generate(&p, &q).map_err(Error::new)?),
+            Mode::GenerateRandom { bits } => {
+                print_rsa_keys(&rsa::generate_random(bits).map_err(Error::new)?)
+            }
         },
         CryptoSystem::PgpXor => match command.mode {
             Mode::Cipher | Mode::Decipher => run_pgp_xor(command),
-            Mode::Generate { .. } => Err(Error::new("crypto system is not implemented")),
+            Mode::Generate { .. } | Mode::GenerateRandom { .. } => {
+                Err(Error::new("crypto system is not implemented"))
+            }
         },
         CryptoSystem::Aes | CryptoSystem::PgpAes => {
             Err(Error::new("crypto system is not implemented"))
