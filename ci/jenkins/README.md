@@ -196,7 +196,9 @@ slow for every push:
   are on the job page under **Plots**, group *Benchmarks*; their history
   lives in the job directory, so it outlives the 30 kept builds.
 - **Stress tests:** `cargo test --workspace --release -- --include-ignored`,
-  the release suite including the ignored `bigint`/`prime` timing checks.
+  the release suite including the ignored `bigint`/`prime` timing checks,
+  with `PROPERTY_CASES=100000` so the roundtrip property tests run 100x their
+  per-PR case count.
 
 Benchmarks run on the shared `rust-agent`, so numbers drift with whatever
 else the host is doing — read the trend, not single points. To run it

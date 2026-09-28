@@ -1,8 +1,26 @@
 use std::env;
+use std::sync::OnceLock;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-/// Cases generated per property.
-pub const CASES: usize = 1000;
+/// Cases generated per property when `PROPERTY_CASES` is unset: sized for the per-PR budget.
+const DEFAULT_CASES: usize = 1000;
+
+/// Cases generated per property: `PROPERTY_CASES` (a positive decimal number) for stress
+/// runs such as the nightly job, else `DEFAULT_CASES`.
+pub fn cases() -> usize {
+    static CASES: OnceLock<usize> = OnceLock::new();
+
+    *CASES.get_or_init(|| match env::var("PROPERTY_CASES") {
+        Ok(value) => match value.parse() {
+            Ok(cases) if cases > 0 => cases,
+            _ => {
+                eprintln!("ignoring invalid PROPERTY_CASES '{value}', using {DEFAULT_CASES}");
+                DEFAULT_CASES
+            }
+        },
+        Err(_) => DEFAULT_CASES,
+    })
+}
 
 /// SplitMix64: tiny and deterministic, enough to spread test inputs (never for keys
 /// that protect anything).
@@ -11,8 +29,9 @@ pub struct Prng {
 }
 
 impl Prng {
-    /// Seeds from `PROPERTY_SEED` (decimal or `0x` hex), else from the clock. The seed is
-    /// printed so a failing run can be replayed; libtest shows it only on failure.
+    /// Seeds from `PROPERTY_SEED` (decimal or `0x` hex), else from the clock. The seed and
+    /// case count are printed so a failing run can be replayed exactly; libtest shows them
+    /// only on failure.
     pub fn from_env(property: &str) -> Self {
         let seed = match env::var("PROPERTY_SEED") {
             Ok(value) => {
@@ -22,7 +41,10 @@ impl Prng {
                 .duration_since(UNIX_EPOCH)
                 .map_or(0, |elapsed| elapsed.as_nanos() as u64),
         };
-        eprintln!("{property}: replay with PROPERTY_SEED={seed:#x}");
+        eprintln!(
+            "{property}: replay with PROPERTY_SEED={seed:#x} PROPERTY_CASES={}",
+            cases()
+        );
 
         Self { state: seed }
     }
