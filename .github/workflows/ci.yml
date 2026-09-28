@@ -45,10 +45,17 @@ jobs:
         run: make re
 
       - name: Delivery check
-        run: ./my_pgp -h
+        run: |
+          test -x ./my_pgp
+          ./my_pgp -h
 
       - name: Functional suite
         run: cargo test --workspace
+
+      # Release build + ignored timing checks (bigint/prime) and the
+      # 1024-bit RSA roundtrip budget, which only hold in release.
+      - name: Release suite
+        run: cargo test --workspace --release -- --include-ignored
 
   # Opt-in for cross-platform / sanitizer coverage once the project actually
   # needs it -- off by default to keep CI fast for solo use. These are sibling
