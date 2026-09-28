@@ -72,6 +72,13 @@ pipeline {
                 sh 'make re'
             }
         }
+        // Subject examples + bonus flag combinations (crates/my_pgp/tests/cases),
+        // its own stage so a retrocompatibility break shows up by name.
+        stage('Retrocompat') {
+            steps {
+                sh 'cargo test -p my_pgp --test functional'
+            }
+        }
         stage('Test') {
             steps {
                 sh 'cargo nextest run --workspace --profile ci'
