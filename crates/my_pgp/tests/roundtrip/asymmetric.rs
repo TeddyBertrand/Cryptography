@@ -10,6 +10,8 @@ const RSA_KEY_BITS: [usize; 4] = [64, 128, 256, 512];
 const PGP_KEY_BITS: [usize; 2] = [320, 512];
 /// OAEP-SHA256 needs at least a 66-byte modulus; these fit 6 and 30-byte messages.
 const OAEP_KEY_BITS: [usize; 2] = [576, 768];
+/// PKCS#1 v1.5 SHA-256 signatures need at least a 62-byte modulus.
+const SIGN_KEY_BITS: [usize; 2] = [512, 768];
 const MAX_MESSAGE_LEN: usize = 256;
 const MAX_XOR_KEY_LEN: usize = 32;
 const AES_KEY_LENS: [usize; 3] = [16, 24, 32];
@@ -106,6 +108,38 @@ fn rsa_oaep_roundtrips() {
             "case {case}: key {}, message {message:02x?}",
             key.public_key()
         );
+    }
+}
+
+#[test]
+fn sign_roundtrips() {
+    let mut prng = Prng::from_env("sign_roundtrips");
+    let keys = key_pool(&mut prng, &SIGN_KEY_BITS);
+
+    for case in 0..CASES {
+        let key = &keys[prng.below(keys.len())];
+        let len = prng.below(MAX_MESSAGE_LEN + 1);
+        let message = prng.bytes(len);
+
+        let signature = sign::sign(&message, &key.d, &key.n).unwrap();
+        assert_eq!(
+            sign::verify(&message, &signature, &key.e, &key.n),
+            Ok(()),
+            "case {case}: key {}, message {message:02x?}",
+            key.public_key()
+        );
+
+        // Flipping any single bit of the message must break the signature.
+        if len > 0 {
+            let bit = prng.below(len * 8);
+            let mut tampered = message.clone();
+            tampered[bit / 8] ^= 1 << (bit % 8);
+            assert!(
+                sign::verify(&tampered, &signature, &key.e, &key.n).is_err(),
+                "case {case}: key {}, message {message:02x?}, flipped bit {bit}",
+                key.public_key()
+            );
+        }
     }
 }
 
