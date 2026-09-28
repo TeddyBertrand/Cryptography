@@ -91,11 +91,40 @@ pub fn generate(p_hex: &str, q_hex: &str) -> Result<KeyPair, String> {
     let p = BigUint::from_hex(p_hex)?;
     let q = BigUint::from_hex(q_hex)?;
 
-    let (n, lambda) = n_and_lambda(&p, &q)?;
+    generate_from_primes(&p, &q)
+}
+
+/// Generates an RSA key pair from primes `p` and `q`.
+pub fn generate_from_primes(p: &BigUint, q: &BigUint) -> Result<KeyPair, String> {
+    let (n, lambda) = n_and_lambda(p, q)?;
     let e = choose_e(&lambda)?;
     let d = compute_d(&e, &lambda)?;
 
     Ok(KeyPair { e, d, n })
+}
+
+/// Generates an RSA key pair with a `bits`-bit modulus from two fresh random primes.
+///
+/// `p` and `q` must differ and, for primes above 100 bits, `|p - q| > 2^(bits/2 - 100)`
+/// (FIPS 186-5), so the modulus can't be factored by Fermat's method.
+pub fn generate_random(bits: usize) -> Result<KeyPair, String> {
+    if bits < 16 || !bits.is_multiple_of(2) {
+        return Err("rsa: key size must be an even number of bits, at least 16".to_string());
+    }
+
+    let prime_bits = bits / 2;
+    let min_distance = BigUint::from_u64(1).shl(prime_bits.saturating_sub(100));
+    let mut rng = random::Rng::new().map_err(|err| err.to_string())?;
+
+    loop {
+        let p = prime::gen_prime(prime_bits, &mut rng).map_err(|err| err.to_string())?;
+        let q = prime::gen_prime(prime_bits, &mut rng).map_err(|err| err.to_string())?;
+
+        let distance = if p > q { &p - &q } else { &q - &p };
+        if distance > min_distance {
+            return generate_from_primes(&p, &q);
+        }
+    }
 }
 
 /// Computes the RSA modulus `n = p * q` and Carmichael's totient `λ = lcm(p-1, q-1)`.
@@ -258,5 +287,24 @@ mod tests {
 
         assert_eq!(keys.public_key(), "0101-19bb");
         assert_eq!(keys.private_key(), "9d5b-19bb");
+    }
+
+    #[test]
+    fn random_key_pair_has_requested_size_and_roundtrips() {
+        for bits in [16, 64, 512] {
+            let keys = generate_random(bits).unwrap();
+            assert_eq!(keys.n.bits(), bits, "wrong modulus size for {bits}-bit key");
+
+            let message = [0x42];
+            let ciphertext = cipher(&message, &keys.e, &keys.n).unwrap();
+            assert_eq!(decipher(&ciphertext, &keys.d, &keys.n).unwrap(), message);
+        }
+    }
+
+    #[test]
+    fn rejects_invalid_random_key_sizes() {
+        for bits in [0, 8, 14, 15, 17, 513] {
+            assert!(generate_random(bits).is_err(), "{bits}-bit key accepted");
+        }
     }
 }
