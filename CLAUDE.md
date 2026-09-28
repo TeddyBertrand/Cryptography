@@ -68,14 +68,14 @@ Depend on the above:
 - `crates/prime` (-> bigint, random) — Miller-Rabin + random prime generation (bonus). #48
 - `crates/xor` (-> core, encoding) — XOR block/stream cipher. #9, #25, #26
 - `crates/aes` (-> core, encoding) — AES-128/192/256 key expansion + block/stream cipher. #9, #27-30, #46
-- `crates/rsa` (-> bigint, encoding, prime, random) — RSA keygen (Carmichael, Fermat e), cipher/decipher, keygen from random primes. #11, #38-40, #49
+- `crates/padding` (-> hash, random) — RSA-OAEP encode/decode on big-endian blocks, MGF1-SHA256 (bonus). #58
+- `crates/rsa` (-> bigint, encoding, padding, prime, random) — RSA keygen (Carmichael, Fermat e), cipher/decipher (textbook or OAEP via `Padding`), keygen from random primes. #11, #38-40, #49
 - `crates/hash` (-> encoding) — SHA-256 (bonus). #54
 - `crates/x25519` (-> encoding, random) — 2nd asymmetric system: GF(2^255-19), Montgomery ladder (bonus). #13, #55-57
 
 Depend on those:
 - `crates/pgp` (-> rsa, xor, aes) — `pgp-xor` / `pgp-aes` hybrid modes. #12, #41, #42
 - `crates/sign` (-> rsa, hash) — RSA signatures, `-s` flag (bonus). #59
-- `crates/padding` (-> hash, random) — RSA-OAEP (bonus). #58
 
 Binary:
 - `crates/my_pgp` (-> core, cli, encoding, xor, aes, rsa, pgp, x25519, sign, padding) — calls `cli::parse`, stdin/stdout, dispatch, error -> exit 84. #8, #21, #23
@@ -106,7 +106,7 @@ Dev shell via `flake.nix` — CI runs everything as `nix develop -c <cmd>`.
 
 - Any error → message on stderr, exit `core::EXIT_CODE` (84).
 - Bonus flags (e.g. `rsa --bits N`) stay out of `-h` so help matches the subject byte-for-byte (`tests/cases/help.txt`). Document bonuses in README instead.
-- `sign`, `padding`, `x25519` are empty stubs; `my_pgp` already depends on them.
+- `sign`, `x25519` are empty stubs; `my_pgp` already depends on them.
 
 ## Enforcement
 
