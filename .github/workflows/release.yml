@@ -3,6 +3,11 @@ name: Release
 on:
   push:
     tags: ["v*.*.*"]
+  # Builds every target when this workflow changes, so a broken target shows
+  # on the PR instead of on the tag. Only a tag publishes a release.
+  pull_request:
+    branches: [dev, main]
+    paths: [".github/workflows/release.yml"]
 
 jobs:
   build:
@@ -18,6 +23,9 @@ jobs:
           - target: aarch64-apple-darwin
             os: macos-15
     runs-on: ${{ matrix.os }}
+    env:
+      # The tag, or `pr-N` on a pull request, whose ref name `N/merge` has a slash.
+      VERSION: ${{ github.ref_type == 'tag' && github.ref_name || format('pr-{0}', github.event.number) }}
     steps:
       - uses: actions/checkout@v7
 
@@ -30,16 +38,17 @@ jobs:
 
       - name: Package
         run: |
-          tar -czf my_pgp-${{ github.ref_name }}-${{ matrix.target }}.tar.gz \
+          tar -czf "my_pgp-$VERSION-${{ matrix.target }}.tar.gz" \
             -C target/${{ matrix.target }}/release my_pgp
 
       - uses: actions/upload-artifact@v7
         with:
           name: my_pgp-${{ matrix.target }}
-          path: my_pgp-${{ github.ref_name }}-${{ matrix.target }}.tar.gz
+          path: my_pgp-${{ env.VERSION }}-${{ matrix.target }}.tar.gz
 
   release:
     needs: build
+    if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     # Creating the release and uploading its assets needs write access.
     permissions:
