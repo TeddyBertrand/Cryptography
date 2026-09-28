@@ -8,7 +8,7 @@ import groovy.transform.Field
 // `bench` prints one row per benchmark, so the pivot stage builds one such
 // file per unit. `csvFileName` is the plot's history, kept in the job dir so
 // it survives cleanWs and build rotation. Log scale: series on one plot span
-// orders of magnitude (XOR ~600 MB/s next to AES ~1 MB/s).
+// orders of magnitude (XOR ~600 MB/s next to AES ~30 MB/s).
 def plotBench(String file, String title, String unit) {
     plot(
         csvFileName: "plot-bench-${file}.csv",

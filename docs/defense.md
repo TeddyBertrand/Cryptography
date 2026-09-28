@@ -71,8 +71,9 @@ matrix of bytes filled column by column (`crates/aes`). The key is 16, 24 or 32 
   middle of each group.
 - **Cipher** (`rounds.rs`): `AddRoundKey`, then each round applies:
   - `SubBytes`: every byte goes through the S-box, the only non-linear step. The S-box is the
-    inverse in GF(2^8) followed by an affine map. This implementation computes it as `x^254`
-    instead of reading a table (see [Timing attacks](#timing-attacks)).
+    inverse in GF(2^8) followed by an affine map. This implementation runs it as a logic
+    circuit on all 16 bytes at once (`sbox.rs`, bitsliced) instead of reading a table (see
+    [Timing attacks](#timing-attacks)).
   - `ShiftRows`: row `i` rotates left by `i` bytes, spreading each column over four columns.
   - `MixColumns`: each column is multiplied by a fixed matrix over GF(2^8), so each output
     byte depends on the four input bytes. With `ShiftRows`, every output bit depends on every
@@ -453,7 +454,8 @@ The secret-dependent code avoids branches and memory accesses indexed by secrets
 - RSA with the private exponent uses fixed-window exponentiation, and reads every table entry
   under a mask. The Montgomery final subtraction is masked instead of branched. The public
   exponent keeps a faster variable-time path, since it is public.
-- AES has no tables: the S-box is computed, and GF(2^8) multiplication always runs 8 steps.
+- AES has no tables: the S-box is a circuit of AND, XOR and NOT gates applied to the whole
+  state, and the key schedule's GF(2^8) arithmetic always runs the same steps.
 - X25519 swaps points with masks, and serializes field elements without branching.
 - OAEP decoding and the HMAC tag check scan every byte.
 
