@@ -12,4 +12,5 @@ matrix-auth
 credentials-binding
 junit
 ws-cleanup
+coverage
 docker-workflow

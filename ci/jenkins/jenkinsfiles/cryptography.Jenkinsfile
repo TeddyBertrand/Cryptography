@@ -49,6 +49,24 @@ pipeline {
                 '''
             }
         }
+        stage('Coverage') {
+            steps {
+                sh 'cargo llvm-cov --workspace --cobertura --output-path target/coverage/cobertura.xml'
+            }
+            post {
+                always {
+                    recordCoverage(
+                        tools: [[parser: 'COBERTURA', pattern: 'target/coverage/cobertura.xml']],
+                        qualityGates: [
+                            [threshold: 70.0, metric: 'LINE', baseline: 'PROJECT', unstable: true]
+                        ]
+                    )
+                }
+            }
+        }
+        stage('Archive artifact') {
+            steps {
+                archiveArtifacts artifacts: 'my_pgp', fingerprint: true
         stage('Epitech dump check') {
             agent {
                 docker { image 'epitechcontent/epitest-docker' }

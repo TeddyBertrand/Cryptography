@@ -91,6 +91,13 @@ check reflecting the build result.
 Branches > Branch protection rules** — a GitHub repo setting, not something
 this config can set.
 
+## Coverage and build artifact
+
+The `cryptography.Jenkinsfile` pipeline runs `cargo llvm-cov` (installed in
+the agent image, a tool not a crate dependency) to produce a Cobertura
+report, published via the Coverage plugin's `recordCoverage` step. The build
+turns unstable if line coverage drops below 70%. The `my_pgp` binary is then
+archived with `archiveArtifacts` and downloadable from each build's page.
 ## Epitech dump check
 
 Both `.github/workflows/ci.yml` (`epitest-dump` job) and the
