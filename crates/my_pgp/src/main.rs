@@ -198,6 +198,51 @@ fn write_output(output: &[u8]) -> Result<()> {
         .map_err(|err| Error::new(format!("failed to write standard output: {err}")))
 }
 
+/// `-s` when ciphering: signs the ciphered output (minus its trailing newline) and appends the
+/// signature as its last line.
+fn sign_output(mut output: Vec<u8>, key: &str) -> Result<Vec<u8>> {
+    strip_trailing_lf(&mut output);
+    let signature = sign::sign_hex(&output, key).map_err(Error::new)?;
+    output.push(b'\n');
+    output.extend_from_slice(signature.as_bytes());
+    output.push(b'\n');
+
+    Ok(output)
+}
+
+/// Bytes the signature of a ciphered `message` covers: the ciphered output as printed. For
+/// `pgp-*` that includes the ciphered symmetric key, given back in the key argument.
+fn signed_payload(command: &Command, message: &[u8]) -> Result<Vec<u8>> {
+    match command.system {
+        CryptoSystem::PgpXor | CryptoSystem::PgpAes => {
+            let key = command
+                .key
+                .as_deref()
+                .ok_or_else(|| Error::new("missing key"))?;
+            let (ciphered_key, _) = pgp::split_key(key).map_err(Error::new)?;
+            Ok([ciphered_key.as_bytes(), b"\n", message].concat())
+        }
+        CryptoSystem::Xor | CryptoSystem::Aes | CryptoSystem::Rsa => Ok(message.to_vec()),
+    }
+}
+
+/// `-s` when deciphering: splits the signature off the last line, checks it over the rest and
+/// returns the rest, the ciphered message to decipher.
+fn verify_input(command: &Command, mut message: Vec<u8>, key: &str) -> Result<Vec<u8>> {
+    strip_trailing_lf(&mut message);
+    let split = message
+        .iter()
+        .rposition(|&byte| byte == b'\n')
+        .ok_or_else(|| Error::new("sign: missing signature"))?;
+    let signature = message.split_off(split + 1);
+    strip_trailing_lf(&mut message);
+    let signature =
+        std::str::from_utf8(&signature).map_err(|_| Error::new("sign: invalid signature"))?;
+    sign::verify_hex(&signed_payload(command, &message)?, signature, key).map_err(Error::new)?;
+
+    Ok(message)
+}
+
 /// Ciphers or deciphers `message` with the command's crypto system, returning the output bytes.
 fn run_system(command: &Command, message: Vec<u8>) -> Result<Vec<u8>> {
     match command.system {
@@ -223,7 +268,12 @@ fn run_command(command: Command) -> Result<()> {
         }
         Mode::Cipher | Mode::Decipher => {
             let message = read_message()?;
-            write_output(&run_system(&command, message)?)
+            let output = match (&command.mode, command.sign_key.as_deref()) {
+                (Mode::Cipher, Some(key)) => sign_output(run_system(&command, message)?, key)?,
+                (_, Some(key)) => run_system(&command, verify_input(&command, message, key)?)?,
+                (_, None) => run_system(&command, message)?,
+            };
+            write_output(&output)
         }
     }
 }
