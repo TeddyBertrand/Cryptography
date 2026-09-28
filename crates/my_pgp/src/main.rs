@@ -48,6 +48,30 @@ fn run_xor(command: Command) -> Result<()> {
     }
 }
 
+fn run_rsa(command: Command) -> Result<()> {
+    let key = command.key.ok_or_else(|| Error::new("missing key"))?;
+    let (exponent, n) = rsa::parse_key(&key).map_err(Error::new)?;
+    let message = read_message(true)?;
+
+    match command.mode {
+        Mode::Cipher => {
+            let ciphertext = rsa::cipher_hex(&message, &exponent, &n).map_err(Error::new)?;
+            io::stdout()
+                .write_all(ciphertext.as_bytes())
+                .map_err(|err| Error::new(format!("failed to write standard output: {err}")))
+        }
+        Mode::Decipher => {
+            let ciphertext_hex = std::str::from_utf8(&message)
+                .map_err(|_| Error::new("ciphertext must be UTF-8 hexadecimal text"))?;
+            let plaintext = rsa::decipher_hex(ciphertext_hex, &exponent, &n).map_err(Error::new)?;
+            io::stdout()
+                .write_all(&plaintext)
+                .map_err(|err| Error::new(format!("failed to write standard output: {err}")))
+        }
+        Mode::Generate { .. } => unreachable!("run_command only dispatches cipher/decipher here"),
+    }
+}
+
 fn run_rsa_generate(p: &str, q: &str) -> Result<()> {
     let keys = rsa::generate(p, q).map_err(Error::new)?;
 
@@ -77,8 +101,8 @@ fn run_command(command: Command) -> Result<()> {
     match command.system {
         CryptoSystem::Xor => run_xor(command),
         CryptoSystem::Rsa => match command.mode {
+            Mode::Cipher | Mode::Decipher => run_rsa(command),
             Mode::Generate { p, q } => run_rsa_generate(&p, &q),
-            Mode::Cipher | Mode::Decipher => Err(Error::new("crypto system is not implemented")),
         },
         CryptoSystem::Aes | CryptoSystem::PgpXor | CryptoSystem::PgpAes => {
             Err(Error::new("crypto system is not implemented"))
