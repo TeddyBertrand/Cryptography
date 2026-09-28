@@ -19,7 +19,8 @@ pub fn cipher(message: &[u8], e: &BigUint, n: &BigUint) -> Result<BigUint, Strin
         return Err("rsa: message is too large for the modulus".to_string());
     }
 
-    m.modpow(e, n)
+    // `e` is public: the variable-time path is safe and much faster for `e = 65537`.
+    m.modpow_vartime(e, n)
 }
 
 /// Deciphers `ciphertext` as `ciphertext^d mod n`, back into message bytes.
@@ -43,7 +44,7 @@ pub fn cipher_oaep(message: &[u8], e: &BigUint, n: &BigUint) -> Result<BigUint, 
     // OAEP blocks are big-endian, `BigUint` bytes are little-endian.
     block.reverse();
 
-    BigUint::from_bytes(&block).modpow(e, n)
+    BigUint::from_bytes(&block).modpow_vartime(e, n)
 }
 
 /// Deciphers an RSA-OAEP `ciphertext` (RFC 8017 §7.1.2) back into message bytes.

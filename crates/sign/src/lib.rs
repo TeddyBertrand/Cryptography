@@ -50,7 +50,8 @@ pub fn verify(message: &[u8], signature: &BigUint, e: &BigUint, n: &BigUint) -> 
     }
 
     let expected = encode(message, modulus_len(n))?;
-    if signature.modpow(e, n)? != expected {
+    // `e` and the signature are public: no need for the constant-time path.
+    if signature.modpow_vartime(e, n)? != expected {
         return Err(invalid_signature());
     }
 
