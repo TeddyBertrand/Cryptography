@@ -1,0 +1,11 @@
+== ARGS ==
+X25519
+-g
+d3
+e3
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+'-g' is only available with rsa
+== EXIT ==
+84
