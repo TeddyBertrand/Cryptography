@@ -30,6 +30,7 @@ pub fn parser() -> Parser {
                 .required(true)
                 .possible_value("xor", "computation using XOR algorithm")
                 .possible_value("aes", "computation using AES algorithm")
+                .possible_value("X25519", "computation using X25519 algorithm")
                 .possible_value("rsa", "computation using RSA algorithm")
                 .possible_value("pgp-xor", "computation using both RSA and XOR algorithm")
                 .possible_value("pgp-aes", "computation using both RSA and AES algorithm"),

@@ -2,6 +2,7 @@
 pub enum CryptoSystem {
     Xor,
     Aes,
+    X25519,
     Rsa,
     PgpXor,
     PgpAes,
@@ -12,6 +13,7 @@ impl CryptoSystem {
         match name {
             "xor" => Some(Self::Xor),
             "aes" => Some(Self::Aes),
+            "X25519" | "x25519" => Some(Self::X25519),
             "rsa" => Some(Self::Rsa),
             "pgp-xor" => Some(Self::PgpXor),
             "pgp-aes" => Some(Self::PgpAes),

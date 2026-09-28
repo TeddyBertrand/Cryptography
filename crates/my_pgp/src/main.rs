@@ -92,6 +92,35 @@ fn run_aes(command: Command) -> Result<()> {
     }
 }
 
+fn run_x25519(command: Command) -> Result<()> {
+    let key = command.key.ok_or_else(|| Error::new("missing key"))?;
+    let message = read_message(false)?;
+    let encrypting = matches!(&command.mode, Mode::Cipher);
+
+    let output = match command.mode {
+        Mode::Cipher => x25519::cipher(&message, &key).map_err(Error::new)?,
+        Mode::Decipher => {
+            let encoded = std::str::from_utf8(&message)
+                .map_err(|_| Error::new("ciphertext must be UTF-8 hexadecimal text"))?;
+            let ciphertext = hex::decode(encoded).map_err(Error::new)?;
+            x25519::decipher(&ciphertext, &key).map_err(Error::new)?
+        }
+        Mode::Generate { .. } | Mode::GenerateRandom { .. } => {
+            return Err(Error::new("invalid X25519 mode"))
+        }
+    };
+
+    if encrypting {
+        io::stdout()
+            .write_all(hex::encode(&output).as_bytes())
+            .map_err(|err| Error::new(format!("failed to write standard output: {err}")))
+    } else {
+        io::stdout()
+            .write_all(&output)
+            .map_err(|err| Error::new(format!("failed to write standard output: {err}")))
+    }
+}
+
 fn run_rsa(command: Command) -> Result<()> {
     let key = command.key.ok_or_else(|| Error::new("missing key"))?;
     let (exponent, n) = rsa::parse_key(&key).map_err(Error::new)?;
@@ -181,6 +210,7 @@ fn run_command(command: Command) -> Result<()> {
     match command.system {
         CryptoSystem::Xor => run_xor(command),
         CryptoSystem::Aes => run_aes(command),
+        CryptoSystem::X25519 => run_x25519(command),
         CryptoSystem::Rsa => match command.mode {
             Mode::Cipher | Mode::Decipher => run_rsa(command),
             Mode::Generate { p, q } => print_rsa_keys(&rsa::generate(&p, &q).map_err(Error::new)?),
