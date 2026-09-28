@@ -92,14 +92,25 @@ fn run_aes(command: Command) -> Result<()> {
     }
 }
 
+/// Maps the `-p` flag to the padding applied around the RSA step.
+fn rsa_padding(command: &Command) -> rsa::Padding {
+    if command.padding {
+        rsa::Padding::Oaep
+    } else {
+        rsa::Padding::None
+    }
+}
+
 fn run_rsa(command: Command) -> Result<()> {
+    let padding = rsa_padding(&command);
     let key = command.key.ok_or_else(|| Error::new("missing key"))?;
     let (exponent, n) = rsa::parse_key(&key).map_err(Error::new)?;
     let message = read_message(true)?;
 
     match command.mode {
         Mode::Cipher => {
-            let ciphertext = rsa::cipher_hex(&message, &exponent, &n).map_err(Error::new)?;
+            let ciphertext =
+                rsa::cipher_hex(&message, &exponent, &n, padding).map_err(Error::new)?;
             io::stdout()
                 .write_all(ciphertext.as_bytes())
                 .map_err(|err| Error::new(format!("failed to write standard output: {err}")))
@@ -107,7 +118,8 @@ fn run_rsa(command: Command) -> Result<()> {
         Mode::Decipher => {
             let ciphertext_hex = std::str::from_utf8(&message)
                 .map_err(|_| Error::new("ciphertext must be UTF-8 hexadecimal text"))?;
-            let plaintext = rsa::decipher_hex(ciphertext_hex, &exponent, &n).map_err(Error::new)?;
+            let plaintext =
+                rsa::decipher_hex(ciphertext_hex, &exponent, &n, padding).map_err(Error::new)?;
             io::stdout()
                 .write_all(&plaintext)
                 .map_err(|err| Error::new(format!("failed to write standard output: {err}")))
@@ -118,8 +130,9 @@ fn run_rsa(command: Command) -> Result<()> {
     }
 }
 
-type PgpCipher = fn(&[u8], bool, &str) -> std::result::Result<(String, String), String>;
-type PgpDecipher = fn(&str, bool, &str) -> std::result::Result<Vec<u8>, String>;
+type PgpCipher =
+    fn(&[u8], bool, rsa::Padding, &str) -> std::result::Result<(String, String), String>;
+type PgpDecipher = fn(&str, bool, rsa::Padding, &str) -> std::result::Result<Vec<u8>, String>;
 
 /// Shared `pgp-*` plumbing: the symmetric layer is picked by the `cipher`/`decipher` pair.
 /// `strip_trailing_lf` mirrors how the matching plain symmetric system reads its message.
@@ -129,13 +142,14 @@ fn run_pgp(
     cipher: PgpCipher,
     decipher: PgpDecipher,
 ) -> Result<()> {
+    let padding = rsa_padding(&command);
     let key = command.key.ok_or_else(|| Error::new("missing key"))?;
     let message = read_message(strip_trailing_lf)?;
 
     match command.mode {
         Mode::Cipher => {
             let (ciphered_key_hex, ciphered_message_hex) =
-                cipher(&message, command.block, &key).map_err(Error::new)?;
+                cipher(&message, command.block, padding, &key).map_err(Error::new)?;
             println!("{ciphered_key_hex}");
             println!("{ciphered_message_hex}");
             Ok(())
@@ -143,7 +157,8 @@ fn run_pgp(
         Mode::Decipher => {
             let ciphertext_hex = std::str::from_utf8(&message)
                 .map_err(|_| Error::new("ciphertext must be UTF-8 hexadecimal text"))?;
-            let plaintext = decipher(ciphertext_hex, command.block, &key).map_err(Error::new)?;
+            let plaintext =
+                decipher(ciphertext_hex, command.block, padding, &key).map_err(Error::new)?;
             io::stdout()
                 .write_all(&plaintext)
                 .map_err(|err| Error::new(format!("failed to write standard output: {err}")))
