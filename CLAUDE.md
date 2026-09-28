@@ -64,7 +64,7 @@ Leaves (no internal deps):
 
 Building blocks:
 - `crates/bigint` (-> encoding) — arbitrary-precision `BigUint`: storage/parsing/cmp, add/sub/mul, div, Montgomery modpow/gcd/lcm/inv. `modpow` is constant-time (secret exponents); `modpow_vartime` only for public exponents. #10, #32-35, #50
-- `crates/hash` (-> encoding) — SHA-256 + HMAC-SHA256 (bonus). #54
+- `crates/hash` (-> encoding) — SHA-256, SHA-512 (Ed25519 seeds) + HMAC-SHA256 (bonus). #54, #130
 - `crates/prime` (-> bigint, random) — Miller-Rabin + random prime generation (bonus). #48
 - `crates/padding` (-> hash, random) — RSA-OAEP encode/decode on big-endian blocks, MGF1-SHA256 (bonus). #58
 - `crates/cli` (-> argparse, core) — my_pgp argument spec (one `Arg` per flag, description = subject text) + project rules (`-g P Q` rsa-only, bare `-g` X25519-only, `--bits` rsa-only, `-p` rsa/pgp-only, key required unless `-g`) -> `Command`. New flag = new `Arg` in `spec.rs`. #20
@@ -73,7 +73,7 @@ Cryptosystems:
 - `crates/xor` (-> core, encoding) — XOR block/stream cipher. #9, #25, #26
 - `crates/aes` (-> core, encoding) — AES-128/192/256 key expansion + block/stream (ECB, zero padding) cipher. #9, #27-30, #46
 - `crates/rsa` (-> bigint, encoding, padding, prime, random) — RSA keygen (Carmichael, Fermat e), cipher/decipher (textbook or OAEP via `Padding`), keygen from random primes. #11, #38-40, #49
-- `crates/x25519` (-> aes, core, encoding, hash, random) — 2nd asymmetric system: GF(2^255-19), Montgomery ladder, key pair generation, hybrid encryption (ephemeral ECDH + HKDF-SHA256 + AES-256-CTR + HMAC-SHA256) (bonus). #13, #55-57
+- `crates/x25519` (-> aes, core, encoding, hash, random) — 2nd asymmetric system: GF(2^255-19), Montgomery ladder, Ed25519 keys (`ed25519.rs`: seed -> SHA-512 scalar, Edwards public key, `u = (1+y)/(1-y)`), hybrid encryption (ephemeral ECDH + HKDF-SHA256 + AES-256-CTR + HMAC-SHA256) (bonus). #13, #55-57, #130
 - `crates/pgp` (-> core, encoding, rsa, xor, aes) — `pgp-xor` / `pgp-aes` hybrid modes. #12, #41, #42
 - `crates/sign` (-> bigint, rsa, hash) — RSASSA-PKCS1-v1_5 SHA-256 sign/verify, `-s` flag (bonus). #59
 
@@ -118,7 +118,7 @@ Dev shell via `flake.nix` — CI's `build-test-lint` and `retrocompat` jobs run 
 - Minimum modulus: `-p` (OAEP) needs ≥ 66 bytes, `-s` ≥ 62 bytes. The subject's 512-bit keys fail `-p`; test with `rsa --bits 1024` keys.
 - Bonuses live in the main binary; there is no `bonus/` directory (README "Delivery" section).
 - Bonus flags (e.g. `rsa --bits N`) stay out of `-h` so help matches the subject's, whose only addition is the `X25519` line (`tests/cases/help.txt`). Document bonuses in README instead.
-- `X25519 -g` prints a random key pair; `-c <public>` / `-d <private>` output/input hex `ephemeral_public || nonce || ciphertext || tag`, tag checked before deciphering. The subject's X25519 example keys are an Ed25519 pair and don't round-trip yet (#130, skipped case `subject_x25519_roundtrips.txt`).
+- `X25519` keys are Ed25519 (RFC 8032): `-g` prints a random seed and its Edwards public key; `-c <public>` / `-d <seed>` convert them to X25519 and output/input hex `ephemeral_public || nonce || ciphertext || tag`, tag checked before deciphering. Raw RFC 7748 X25519 keys are not accepted. `x25519::public_key` stays the raw ladder (ephemeral keys, `timing` harness).
 - `-s` takes an extra hidden `sign_key` positional (signer `d-n` on `-c`, verifier `e-n` on `-d`); signature is appended as the last output line and covers the ciphered output as printed (both lines for `pgp-*`).
 
 ## Enforcement

@@ -1,5 +1,3 @@
-== SKIP ==
-subject keys are an Ed25519 pair, not X25519 (#130)
 == ARGS ==
 X25519
 -c

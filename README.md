@@ -28,7 +28,7 @@ make fclean   # clean + removes ./my_pgp
 | `xor` | symmetric | any number of bytes |
 | `aes` | symmetric | 16, 24 or 32 bytes (AES-128, AES-192, AES-256) |
 | `rsa` | asymmetric | `e-n` to cipher, `d-n` to decipher |
-| `X25519` | asymmetric | 32-byte public key to cipher, 32-byte private key to decipher |
+| `X25519` | asymmetric | 32-byte Ed25519 public key to cipher, 32-byte Ed25519 seed to decipher |
 | `pgp-xor`, `pgp-aes` | hybrid | `SYMMETRIC_KEY:e-n` to cipher, `CIPHERED_KEY:d-n` to decipher |
 
 | Flag | Meaning |
@@ -116,12 +116,12 @@ Textbook RSA ciphers the symmetric key as a number, so its trailing `00` bytes a
 $ ./my_pgp X25519 -g
 public key: <32-byte public key>
 private key: <32-byte private key>
-$ echo 'Winter is coming' | ./my_pgp X25519 -c 8520f0098930a754748b7ddcb43ef75a0dbf3a0d26381af4eba4a98eaa9b4e6a \
-    | ./my_pgp X25519 -d 77076d0a7318a57d3c16c17251b26645df4c2f87ebc0992ab177fba51db92c2a
+$ echo 'Winter is coming' | ./my_pgp X25519 -c d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a \
+    | ./my_pgp X25519 -d 9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60
 Winter is coming
 ```
 
-These keys are the RFC 7748 test pair. The subject's X25519 example uses an Ed25519 key pair, which does not round-trip yet (#130). [X25519 hybrid encryption](#x25519-hybrid-encryption) describes the ciphertext format.
+These are the subject's keys, an Ed25519 pair (RFC 8032, test 1): the private key is a seed, the public key an Edwards point. `my_pgp` converts them to X25519 keys as libsodium does: the scalar is the first half of SHA-512(seed), and the public key's `y` becomes `u = (1 + y) / (1 - y)`. `-g` prints a pair in the same form. [X25519 hybrid encryption](#x25519-hybrid-encryption) describes the ciphertext format.
 
 ## Bonus options
 
@@ -135,7 +135,7 @@ These options are left out of `./my_pgp -h` so the help stays identical to the s
 ./my_pgp X25519 -d <recipient_private_key>
 ```
 
-`-g` prints a 32-byte X25519 public/private key pair as hexadecimal. Ciphering creates a fresh ephemeral key pair, derives AES-256-CTR and authentication keys with HKDF-SHA256, then emits hexadecimal `ephemeral_public_key || nonce || ciphertext || tag`. Deciphering verifies the HMAC-SHA256 tag before returning plaintext, so binary input round-trips exactly and a wrong private key or modified ciphertext exits 84.
+`-g` prints a 32-byte Ed25519 public key and seed as hexadecimal (see [X25519](#x25519) for the key format). Ciphering creates a fresh ephemeral key pair, derives AES-256-CTR and authentication keys with HKDF-SHA256, then emits hexadecimal `ephemeral_public_key || nonce || ciphertext || tag`. Deciphering verifies the HMAC-SHA256 tag before returning plaintext, so binary input round-trips exactly and a wrong private key or modified ciphertext exits 84.
 
 ### RSA keys from random primes
 
@@ -203,14 +203,14 @@ The code is a Cargo workspace. Each crate holds one building block, and `crates/
 | `argparse` | generic argument parser and help generator, with no knowledge of `my_pgp` | — |
 | `random` | CSPRNG seeded from `/dev/urandom` | — |
 | `bigint` | arbitrary-precision `BigUint`: arithmetic, division, Montgomery `modpow`, `gcd`, `lcm`, modular inverse | `encoding` |
-| `hash` | SHA-256 and HMAC-SHA256 | `encoding` |
+| `hash` | SHA-256, SHA-512 and HMAC-SHA256 | `encoding` |
 | `cli` | `my_pgp` argument spec and rules, turned into a `Command` | `argparse`, `core` |
 | `prime` | Miller-Rabin test and random prime generation | `bigint`, `random` |
 | `xor` | XOR block and stream cipher | `core`, `encoding` |
 | `aes` | AES-128/192/256 key expansion, block and stream cipher | `core`, `encoding` |
 | `padding` | RSA-OAEP with MGF1-SHA256 | `hash`, `random` |
 | `rsa` | key generation, textbook and OAEP cipher/decipher | `bigint`, `encoding`, `padding`, `prime`, `random` |
-| `x25519` | field arithmetic mod 2^255-19, Montgomery ladder, hybrid encryption | `aes`, `core`, `encoding`, `hash`, `random` |
+| `x25519` | field arithmetic mod 2^255-19, Montgomery ladder, Ed25519 keys and their conversion, hybrid encryption | `aes`, `core`, `encoding`, `hash`, `random` |
 | `pgp` | `pgp-xor` and `pgp-aes` hybrid modes | `core`, `encoding`, `rsa`, `xor`, `aes` |
 | `sign` | RSASSA-PKCS1-v1_5 SHA-256 signatures | `bigint`, `rsa`, `hash` |
 | `my_pgp` | binary: parses arguments, reads standard input, dispatches, maps errors to exit 84 | `core`, `cli`, `encoding`, `xor`, `aes`, `rsa`, `pgp`, `x25519`, `sign`, `padding` |
