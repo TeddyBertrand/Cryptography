@@ -1,4 +1,4 @@
-use super::{field, state::State};
+use super::{field, sbox, state::State};
 
 /// Ciphers one block with the round keys of an expanded key (`rounds + 1` of them).
 pub fn cipher(state: &mut State, round_keys: &[[u8; 16]]) {
@@ -41,15 +41,11 @@ fn add_round_key(state: &mut State, round_key: &[u8; 16]) {
 }
 
 fn substitute_bytes(state: &mut State) {
-    for byte in state {
-        *byte = field::substitute(*byte);
-    }
+    sbox::substitute(state);
 }
 
 fn inverse_substitute_bytes(state: &mut State) {
-    for byte in state {
-        *byte = field::inverse_substitute(*byte);
-    }
+    sbox::inverse_substitute(state);
 }
 
 fn shift_rows(state: &mut State) {

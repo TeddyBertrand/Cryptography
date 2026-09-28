@@ -1,3 +1,5 @@
+/// The S-box of one byte: the key schedule's `SubWord`, and the reference for the bitsliced
+/// S-box (`sbox`) that `SubBytes` uses.
 pub fn substitute(value: u8) -> u8 {
     let inverse = inverse(value);
     inverse
@@ -8,6 +10,8 @@ pub fn substitute(value: u8) -> u8 {
         ^ 0x63
 }
 
+/// Reference for the bitsliced inverse S-box (`sbox`), which the cipher uses.
+#[cfg(test)]
 pub fn inverse_substitute(value: u8) -> u8 {
     inverse(value.rotate_left(1) ^ value.rotate_left(3) ^ value.rotate_left(6) ^ 0x05)
 }
