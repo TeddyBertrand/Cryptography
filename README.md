@@ -55,7 +55,7 @@ $ echo 20070f2700071c6a4449060a490515164e4e12190b190011063c | ./my_pgp xor -d -b
 You know nothing, Jon Snow
 ```
 
-In stream mode, the key repeats over the message. Deciphering removes the zero padding, so trailing zero bytes of the original message are lost.
+In stream mode, the message is cut into key-sized blocks, and each one is ciphered as in block mode: reversed, then XORed with the key. A message exactly one key long gives the same output with or without `-b`. Deciphering removes the zero padding, so trailing zero bytes of the original message are lost.
 
 ### AES
 

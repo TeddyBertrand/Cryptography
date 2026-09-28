@@ -11,12 +11,15 @@ the subject: `19bb` is `0xbb19`.
 
 ### How it works
 
-`c = m ⊕ k`, byte by byte (`crates/xor`). XOR is its own inverse, so deciphering is the same
-operation: `c ⊕ k = m ⊕ k ⊕ k = m`.
+`c = reverse(m) ⊕ k`, byte by byte, on a key-sized block (`crates/xor`). The subject reads the
+key and the ciphered output as little-endian numbers but the message as bytes: its example only
+comes out with the message reversed. XOR is its own inverse, so deciphering undoes it:
+`reverse(c ⊕ k) = reverse(reverse(m) ⊕ k ⊕ k) = m`.
 
 - Block mode (`-b`): the message and the key have the same length.
-- Stream mode: the message is cut into key-sized blocks and the key repeats over them. The
-  last block is padded with zeros, and deciphering strips trailing zeros.
+- Stream mode: the message is cut into key-sized blocks, the last one padded with zeros, and
+  each block is ciphered as in block mode, so a one-block message gives the same output with or
+  without `-b`. Deciphering strips trailing zeros.
 
 ### Why it is (in)secure
 
@@ -25,8 +28,8 @@ long as the message and never reused, every plaintext of that length is equally 
 the ciphertext. No amount of computing power helps. Every condition is needed, and `my_pgp`
 breaks most of them:
 
-- **Key reuse.** Two messages under the same key give `c1 ⊕ c2 = m1 ⊕ m2`: the key cancels
-  out. Knowing or guessing one message gives the other:
+- **Key reuse.** Two messages under the same key give `c1 ⊕ c2 = m1 ⊕ m2`, block reversal
+  aside: the key cancels out. Knowing or guessing one message gives the other:
 
   ```
   $ K=0badc0ffee0ddf000badc0ffee0ddf00
@@ -34,23 +37,25 @@ breaks most of them:
   $ echo 'retreat at dusk!' | ./my_pgp xor -c $K    # c2
   ```
 
-  XORing `c1`, `c2` and `attack at dawn!!` gives back `retreat at dusk!`. Without a known
-  message, `m1 ⊕ m2` still falls to "crib dragging" with common words. This is how the
-  Venona project read Soviet traffic whose pads had been reused.
+  XORing `c1`, `c2` and `attack at dawn!!` gives back `retreat at dusk!`, once the public
+  block reversal is undone. Without a known message, `m1 ⊕ m2` still falls to "crib
+  dragging" with common words. This is how the Venona project read Soviet traffic whose pads
+  had been reused.
 - **Stream mode reuses the key inside one message.** A 16-byte key over a 1 KiB message is
   the Vigenère cipher: the key length shows in the repetitions (Kasiski, index of
   coincidence), then each key byte falls to frequency analysis.
-- **Known plaintext gives the key**: `k = m ⊕ c`. Zero padding gives it away for free, since
-  `0 ⊕ k = k`:
+- **Known plaintext gives the key**: `k = reverse(m) ⊕ c`. Zero padding gives it away for
+  free, since `0 ⊕ k = k`: the padding lands at the start of the reversed block.
 
   ```
   $ printf 'A' | ./my_pgp xor -c 00112233
-  41112233
+  00112272
   ```
 
-- **Malleability.** Flipping bit `i` of `c` flips bit `i` of `m`. An attacker who knows the
-  format can change `amount=100` into `amount=900` without knowing the key. Nothing detects
-  it: there is no integrity check (see [Signatures](#signatures-bonus--s)).
+- **Malleability.** Flipping a bit of `c` flips the bit at the mirrored position of its block
+  in `m`. An attacker who knows the format can change `amount=100` into `amount=900` without
+  knowing the key. Nothing detects it: there is no integrity check (see
+  [Signatures](#signatures-bonus--s)).
 
 XOR is only practical with a pad as long as all the traffic, which must be exchanged securely
 beforehand. The subject says the same: "only if the key is as long as the message and is used
