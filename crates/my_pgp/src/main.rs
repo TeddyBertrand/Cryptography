@@ -3,6 +3,7 @@ use std::{
     process,
 };
 
+use aes::Aes;
 use cli::{Command, CryptoSystem, Mode, Outcome};
 use core::{Bytes, Cipher, Error, Result};
 use encoding::hex;
@@ -45,6 +46,51 @@ fn run_xor(command: Command) -> Result<()> {
         io::stdout()
             .write_all(&output)
             .map_err(|err| Error::new(format!("failed to write standard output: {err}")))
+    }
+}
+
+fn run_aes(command: Command) -> Result<()> {
+    let key = command.key.ok_or_else(|| Error::new("missing key"))?;
+    let mut key = hex::decode(&key).map_err(Error::new)?;
+    reverse_aes_words(&mut key);
+    let cipher = Aes::get_aes_key(Bytes::new(key))?;
+    let message = read_message(command.block)?;
+    let encrypting = matches!(&command.mode, Mode::Cipher);
+
+    let mut output = match command.mode {
+        Mode::Cipher if command.block => cipher.cipher_block(&Bytes::new(message))?,
+        Mode::Cipher => cipher.cipher(&Bytes::new(message))?,
+        Mode::Decipher => {
+            let encoded = std::str::from_utf8(&message)
+                .map_err(|_| Error::new("ciphertext must be UTF-8 hexadecimal text"))?;
+            let mut ciphertext = hex::decode(encoded).map_err(Error::new)?;
+            reverse_aes_words(&mut ciphertext);
+            let ciphertext = Bytes::new(ciphertext);
+
+            if command.block {
+                cipher.decipher_block(&ciphertext)?
+            } else {
+                cipher.decipher(&ciphertext)?
+            }
+        }
+        Mode::Generate { .. } => return Err(Error::new("invalid AES mode")),
+    };
+
+    if encrypting {
+        reverse_aes_words(&mut output);
+        io::stdout()
+            .write_all(hex::encode(&output).as_bytes())
+            .map_err(|err| Error::new(format!("failed to write standard output: {err}")))
+    } else {
+        io::stdout()
+            .write_all(&output)
+            .map_err(|err| Error::new(format!("failed to write standard output: {err}")))
+    }
+}
+
+fn reverse_aes_words(bytes: &mut [u8]) {
+    for word in bytes.chunks_exact_mut(4) {
+        word.reverse();
     }
 }
 
@@ -100,11 +146,12 @@ fn read_message(strip_trailing_lf: bool) -> Result<Vec<u8>> {
 fn run_command(command: Command) -> Result<()> {
     match command.system {
         CryptoSystem::Xor => run_xor(command),
+        CryptoSystem::Aes => run_aes(command),
         CryptoSystem::Rsa => match command.mode {
             Mode::Cipher | Mode::Decipher => run_rsa(command),
             Mode::Generate { p, q } => run_rsa_generate(&p, &q),
         },
-        CryptoSystem::Aes | CryptoSystem::PgpXor | CryptoSystem::PgpAes => {
+        CryptoSystem::PgpXor | CryptoSystem::PgpAes => {
             Err(Error::new("crypto system is not implemented"))
         }
     }
