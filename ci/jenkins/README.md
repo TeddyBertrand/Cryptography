@@ -18,6 +18,7 @@ authoritative CI on PRs; this is an optional self-hosted mirror.
 | Debug build | `build-test-lint` / Build (`cargo build`) | Build (`make re`, release) |
 | `cargo test --workspace` | `build-test-lint` / Test | Test (`cargo nextest`, JUnit report) |
 | Retrocompatibility suite (`cargo test -p my_pgp --test functional`) | `retrocompat` / Retrocompatibility suite | Retrocompat |
+| Delivery tree (`scripts/check_delivery.sh`) | `delivery` / Delivery tree | Delivery tree |
 | `make re` in grading image | `epitest-dump` / Build (make re) | Epitech dump check |
 | `test -x ./my_pgp && ./my_pgp -h` | `epitest-dump` / Delivery check | Delivery check + Epitech dump check |
 | Functional suite in grading image | `epitest-dump` / Functional suite | Epitech dump check |

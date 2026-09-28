@@ -59,6 +59,17 @@ jobs:
       - name: Retrocompatibility suite
         run: nix develop -c cargo test -p my_pgp --test functional
 
+  # The Epitech dump and the org mirror receive every tracked file: no build
+  # outputs, temp files, secrets, binaries or large files, and the Makefile
+  # rules the subject requires. Needs only git, make and awk, so no Nix.
+  delivery:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Delivery tree
+        run: sh scripts/check_delivery.sh
+
   epitest-dump:
     runs-on: ubuntu-latest
     container: epitechcontent/epitest-docker:latest
