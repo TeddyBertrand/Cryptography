@@ -10,6 +10,10 @@ workspace = true
 name = "bench"
 path = "src/main.rs"
 
+[[bin]]
+name = "timing"
+path = "src/timing.rs"
+
 [dependencies]
 core = { path = "../crates/core" }
 random = { path = "../crates/random" }
@@ -17,3 +21,5 @@ prime = { path = "../crates/prime" }
 xor = { path = "../crates/xor" }
 rsa = { path = "../crates/rsa" }
 aes = { path = "../crates/aes" }
+bigint = { path = "../crates/bigint" }
+x25519 = { path = "../crates/x25519" }
