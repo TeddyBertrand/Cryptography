@@ -120,6 +120,29 @@ mod tests {
     }
 
     #[test]
+    fn ciphers_and_deciphers_nist_aes_192_and_aes_256_vectors() {
+        let plaintext = bytes("00112233445566778899aabbccddeeff");
+        let vectors = [
+            (
+                "000102030405060708090a0b0c0d0e0f1011121314151617",
+                "dda97ca4864cdfe06eaf70a0ec0d7191",
+            ),
+            (
+                "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+                "8ea2b7ca516745bfeafc49904b496089",
+            ),
+        ];
+
+        for (key, ciphertext) in vectors {
+            let cipher = Aes::get_aes_key(bytes(key)).unwrap();
+            let ciphertext = bytes(ciphertext);
+
+            assert_eq!(cipher.cipher_block(&plaintext), Ok(ciphertext.clone()));
+            assert_eq!(cipher.decipher_block(&ciphertext), Ok(plaintext.clone()));
+        }
+    }
+
+    #[test]
     fn ciphers_and_deciphers_the_nist_sp_800_38a_aes_128_blocks() {
         let cipher = Aes::get_aes_key(bytes("2b7e151628aed2a6abf7158809cf4f3c")).unwrap();
         let vectors = [

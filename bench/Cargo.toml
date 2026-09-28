@@ -11,6 +11,9 @@ name = "bench"
 path = "src/main.rs"
 
 [dependencies]
-bigint = { path = "../crates/bigint" }
+core = { path = "../crates/core" }
+random = { path = "../crates/random" }
+prime = { path = "../crates/prime" }
+xor = { path = "../crates/xor" }
 rsa = { path = "../crates/rsa" }
 aes = { path = "../crates/aes" }
