@@ -5,10 +5,27 @@ as code (JCasC — Jenkins Configuration as Code) so there is no click-ops:
 security, plugins, the agent node and the `cryptography-dev`/`cryptography-main`
 pipeline jobs are all
 baked into the controller image and re-applied on every boot. This mirrors
-the same checks as `.github/workflows/ci.yml`: `cargo fmt --all -- --check`,
-`cargo build --workspace`, `cargo test --workspace`,
-`cargo clippy --workspace -- -D warnings`. GitHub Actions stays the
+the checks of `.github/workflows/ci.yml` (see [Parity with GitHub
+Actions](#parity-with-github-actions)). GitHub Actions stays the
 authoritative CI on PRs; this is an optional self-hosted mirror.
+
+## Parity with GitHub Actions
+
+| Check | GitHub Actions (`ci.yml`) | Jenkins (`cryptography.Jenkinsfile`) |
+|---|---|---|
+| `cargo fmt --all -- --check` | `build-test-lint` / Format check | Format |
+| `cargo clippy --workspace -- -D warnings` | `build-test-lint` / Clippy | Lint |
+| Debug build | `build-test-lint` / Build (`cargo build`) | Build (`make re`, release) |
+| `cargo test --workspace` | `build-test-lint` / Test | Test (`cargo nextest`, JUnit report) |
+| `make re` in grading image | `epitest-dump` / Build (make re) | Epitech dump check |
+| `test -x ./my_pgp && ./my_pgp -h` | `epitest-dump` / Delivery check | Delivery check + Epitech dump check |
+| Functional suite in grading image | `epitest-dump` / Functional suite | Epitech dump check |
+| `cargo test --release -- --include-ignored` | `epitest-dump` / Release suite | Epitech dump check |
+| Coverage (`cargo llvm-cov`, 70% gate) | — | Coverage |
+| Archive `my_pgp` artifact | — | Archive artifact |
+
+Coverage and artifact archiving are Jenkins-only; everything else fails the
+build on both sides.
 
 ## Prerequisites
 
@@ -25,7 +42,7 @@ authoritative CI on PRs; this is an optional self-hosted mirror.
    cp ci/jenkins/.env.example ci/jenkins/.env
    ```
    Edit `JENKINS_ADMIN_PASSWORD` (and optionally `JENKINS_ADMIN_ID`,
-   `JENKINS_ADMIN_EMAIL`) in `ci/jenkins/.env`.
+   `JENKINS_ADMIN_EMAIL`) and `DOCKER_GID` in `ci/jenkins/.env`.
 
 2. Bring the controller up. JCasC applies automatically — no setup wizard,
    no manual node/job creation:
@@ -104,10 +121,14 @@ Both `.github/workflows/ci.yml` (`epitest-dump` job) and the
 `cryptography.Jenkinsfile` (`Epitech dump check` stage) rebuild and run the
 functional suite inside `epitechcontent/epitest-docker`, the actual grading
 environment, catching toolchain drift (Fedora, `make`) that the Nix/rust-agent
-checks wouldn't see. The Jenkins stage runs in its own `docker { image ... }`
-agent (`docker-workflow` plugin), so the `rust-agent` node needs a Docker
-daemon reachable (Docker-in-Docker or a mounted socket) — not something JCasC
-can configure.
+checks wouldn't see. The Jenkins stage runs in a `docker { image ... }`
+agent (`docker-workflow` plugin) on the same `rust-agent` node
+(`reuseNode true`). `rust-agent` ships the Docker CLI and talks to the host
+daemon through the mounted `/var/run/docker.sock`; set `DOCKER_GID` in
+`ci/jenkins/.env` to the host's docker group id
+(`getent group docker | cut -d: -f3`) so the `jenkins` user can use it. The
+agent workspace lives in the `rust_agent_workspace` volume so docker-workflow
+can share it with the grading container via `--volumes-from`.
 
 ## Running the tests
 

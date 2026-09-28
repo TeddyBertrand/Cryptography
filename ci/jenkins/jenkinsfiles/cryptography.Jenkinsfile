@@ -67,15 +67,24 @@ pipeline {
         stage('Archive artifact') {
             steps {
                 archiveArtifacts artifacts: 'my_pgp', fingerprint: true
+            }
+        }
         stage('Epitech dump check') {
             agent {
-                docker { image 'epitechcontent/epitest-docker' }
+                // reuseNode: rust-agent has a single executor, a second
+                // node allocation would wait on the one this build holds.
+                docker {
+                    image 'epitechcontent/epitest-docker'
+                    reuseNode true
+                }
             }
             steps {
                 sh '''
                     make re
+                    test -x ./my_pgp
                     ./my_pgp -h
                     cargo test --workspace
+                    cargo test --workspace --release -- --include-ignored
                 '''
             }
         }
