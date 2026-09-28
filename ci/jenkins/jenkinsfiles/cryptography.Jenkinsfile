@@ -81,8 +81,10 @@ pipeline {
             steps {
                 sh '''
                     make re
+                    test -x ./my_pgp
                     ./my_pgp -h
                     cargo test --workspace
+                    cargo test --workspace --release -- --include-ignored
                 '''
             }
         }
