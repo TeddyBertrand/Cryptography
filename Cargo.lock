@@ -130,7 +130,10 @@ dependencies = [
 name = "x25519"
 version = "0.1.0"
 dependencies = [
+ "aes",
+ "core",
  "encoding",
+ "hash",
  "random",
 ]
 

@@ -73,7 +73,7 @@ fn roundtrips_with_keys(public_key: &str, private_key: &str, message: &[u8]) {
         "decipher failed with {private_key}: {}",
         String::from_utf8_lossy(&deciphered.stderr)
     );
-    assert_eq!(deciphered.stdout, message);
+    assert_eq!(deciphered.stdout, [message, b"\n"].concat());
 }
 
 /// Bit length of a minimal little-endian hex number.
