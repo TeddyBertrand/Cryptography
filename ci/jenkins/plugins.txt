@@ -16,3 +16,4 @@ coverage
 docker-workflow
 pipeline-githubnotify-step
 plot
+embeddable-build-status
