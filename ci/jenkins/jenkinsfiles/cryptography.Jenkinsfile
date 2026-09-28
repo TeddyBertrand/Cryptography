@@ -1,3 +1,17 @@
+// Plain pipelineJob (not multibranch): githubNotify can't infer the repo
+// from the SCM source, so account/repo/sha are passed explicitly.
+def notifyGitHub(String status, String description) {
+    githubNotify(
+        credentialsId: 'github-status-token',
+        context: 'continuous-integration/jenkins',
+        account: 'TeddyBertrand',
+        repo: 'Cryptography',
+        sha: env.GIT_COMMIT,
+        status: status,
+        description: description
+    )
+}
+
 pipeline {
     agent { label 'rust-agent' }
 
@@ -8,12 +22,7 @@ pipeline {
     stages {
         stage('Notify pending') {
             steps {
-                githubNotify(
-                    credentialsId: 'github-status-token',
-                    context: 'continuous-integration/jenkins',
-                    status: 'PENDING',
-                    description: 'Build started'
-                )
+                notifyGitHub('PENDING', 'Build started')
             }
         }
         stage('Format') {
@@ -92,20 +101,10 @@ pipeline {
 
     post {
         success {
-            githubNotify(
-                credentialsId: 'github-status-token',
-                context: 'continuous-integration/jenkins',
-                status: 'SUCCESS',
-                description: 'Build succeeded'
-            )
+            notifyGitHub('SUCCESS', 'Build succeeded')
         }
         failure {
-            githubNotify(
-                credentialsId: 'github-status-token',
-                context: 'continuous-integration/jenkins',
-                status: 'FAILURE',
-                description: 'Build failed'
-            )
+            notifyGitHub('FAILURE', 'Build failed')
         }
         always {
             cleanWs()
