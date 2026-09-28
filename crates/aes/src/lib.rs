@@ -11,15 +11,16 @@ pub enum AesMode {
     Aes256,
 }
 
+/// An AES key, expanded once into its round keys.
 pub struct Aes {
-    key: Bytes,
-    rounds: usize,
+    round_keys: key_expansion::RoundKeys,
 }
 
 impl Aes {
     pub fn get_aes_key(key: Bytes) -> Result<Self> {
         let rounds = key_expansion::round_count(key.len())?;
-        Ok(Self { key, rounds })
+        let round_keys = key_expansion::expand(&key, rounds)?;
+        Ok(Self { round_keys })
     }
 
     pub fn which_aes_mode(key: &Bytes) -> Result<AesMode> {
@@ -33,13 +34,13 @@ impl Aes {
 
     pub fn cipher_block(&self, message: &Bytes) -> Result<Bytes> {
         let mut state = state::from_bytes(message)?;
-        rounds::cipher(&mut state, &self.key, self.rounds)?;
+        rounds::cipher(&mut state, &self.round_keys);
         Ok(state::into_bytes(state))
     }
 
     pub fn decipher_block(&self, ciphertext: &Bytes) -> Result<Bytes> {
         let mut state = state::from_bytes(ciphertext)?;
-        rounds::decipher(&mut state, &self.key, self.rounds)?;
+        rounds::decipher(&mut state, &self.round_keys);
         Ok(state::into_bytes(state))
     }
 }
@@ -58,12 +59,11 @@ impl Cipher for Aes {
         let padding = (state::BLOCK_SIZE - padded.len() % state::BLOCK_SIZE) % state::BLOCK_SIZE;
         padded.resize(padded.len() + padding, 0);
 
-        let mut ciphertext = Vec::with_capacity(padded.len());
-        for block in padded.chunks(state::BLOCK_SIZE) {
-            ciphertext.extend(self.cipher_block(&Bytes::new(block.to_vec()))?.into_inner());
+        for block in padded.as_chunks_mut::<{ state::BLOCK_SIZE }>().0 {
+            rounds::cipher(block, &self.round_keys);
         }
 
-        Ok(Bytes::new(ciphertext))
+        Ok(Bytes::new(padded))
     }
 
     fn decipher(&self, ciphertext: &Bytes) -> Result<Bytes> {
@@ -71,12 +71,9 @@ impl Cipher for Aes {
             return Err(Error::new("AES ciphertext must be a multiple of 128 bits"));
         }
 
-        let mut plaintext = Vec::with_capacity(ciphertext.len());
-        for block in ciphertext.chunks(state::BLOCK_SIZE) {
-            plaintext.extend(
-                self.decipher_block(&Bytes::new(block.to_vec()))?
-                    .into_inner(),
-            );
+        let mut plaintext = ciphertext.to_vec();
+        for block in plaintext.as_chunks_mut::<{ state::BLOCK_SIZE }>().0 {
+            rounds::decipher(block, &self.round_keys);
         }
         while plaintext.last() == Some(&0) {
             plaintext.pop();

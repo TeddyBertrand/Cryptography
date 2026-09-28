@@ -108,6 +108,8 @@ All men must die
 
 `pgp-xor` works the same way with an XOR key, and both accept stream mode.
 
+Textbook RSA ciphers the symmetric key as a number, so its trailing `00` bytes are lost on the way. Deciphering restores them: in block mode the XOR key is as long as the ciphertext, and an AES key is padded to the smallest AES size that holds it. Ciphering refuses the keys this can't restore, a `pgp-xor` stream key ending in `00` or a 24- or 32-byte AES key ending in 8 or more zero bytes, unless `-p` is given (OAEP keeps the exact length).
+
 ### X25519
 
 ```
@@ -228,7 +230,7 @@ cargo test --workspace --release -- --include-ignored        # adds the bigint a
 
 - **Unit tests** live next to the code, in a `#[cfg(test)] mod tests` in each crate.
 - **Functional tests** run the real binary. Each file in `crates/my_pgp/tests/cases/` has `== ARGS ==`, `== STDIN ==`, `== STDOUT ==`, `== STDERR ==` and `== EXIT ==` sections, so a new CLI case is a new `.txt` file with no Rust. `== THEN ==` pipes the output into a second run, and `== SKIP ==` disables a case with a reason. Run them alone with `cargo test -p my_pgp --test functional`.
-- **Property tests** in `crates/my_pgp/tests/roundtrip/` check 1000 random round trips per system. A failure prints its seed; replay it with `PROPERTY_SEED=0x... cargo test -p my_pgp --test roundtrip`.
+- **Property tests** in `crates/my_pgp/tests/roundtrip/` check 1000 random round trips per system, or `PROPERTY_CASES=N`. A failure prints its seed and case count; replay it with `PROPERTY_SEED=0x... PROPERTY_CASES=N cargo test -p my_pgp --test roundtrip`.
 - **Subject examples**: `sh tests/xor_pdf.sh` and `sh tests/pgp_aes_pdf.sh` replay the PDF's examples.
 
 Before pushing, run the same lint and format checks as CI:

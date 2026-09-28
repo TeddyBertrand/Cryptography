@@ -2,7 +2,7 @@ use aes::Aes;
 use core::{Bytes, Cipher};
 use xor::Xor;
 
-use crate::prng::{without_trailing_zeros, Prng, CASES};
+use crate::prng::{cases, without_trailing_zeros, Prng};
 
 const MAX_MESSAGE_LEN: usize = 256;
 const MAX_XOR_KEY_LEN: usize = 64;
@@ -27,7 +27,7 @@ fn random_aes(prng: &mut Prng) -> (Vec<u8>, Aes) {
 fn xor_stream_roundtrips() {
     let mut prng = Prng::from_env("xor_stream_roundtrips");
 
-    for case in 0..CASES {
+    for case in 0..cases() {
         let (key, xor) = random_xor(&mut prng);
         let message = prng.message(key.len(), MAX_MESSAGE_LEN);
 
@@ -46,7 +46,7 @@ fn xor_stream_roundtrips() {
 fn xor_block_roundtrips() {
     let mut prng = Prng::from_env("xor_block_roundtrips");
 
-    for case in 0..CASES {
+    for case in 0..cases() {
         let (key, xor) = random_xor(&mut prng);
         let message = prng.bytes(key.len());
 
@@ -65,7 +65,7 @@ fn xor_block_roundtrips() {
 fn aes_stream_roundtrips() {
     let mut prng = Prng::from_env("aes_stream_roundtrips");
 
-    for case in 0..CASES {
+    for case in 0..cases() {
         let (key, aes) = random_aes(&mut prng);
         let message = prng.message(AES_BLOCK_LEN, MAX_MESSAGE_LEN);
 
@@ -84,7 +84,7 @@ fn aes_stream_roundtrips() {
 fn aes_block_roundtrips() {
     let mut prng = Prng::from_env("aes_block_roundtrips");
 
-    for case in 0..CASES {
+    for case in 0..cases() {
         let (key, aes) = random_aes(&mut prng);
         let message = prng.bytes(AES_BLOCK_LEN);
 

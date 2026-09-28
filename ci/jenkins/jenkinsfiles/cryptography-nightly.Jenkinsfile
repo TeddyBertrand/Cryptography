@@ -8,7 +8,7 @@ import groovy.transform.Field
 // `bench` prints one row per benchmark, so the pivot stage builds one such
 // file per unit. `csvFileName` is the plot's history, kept in the job dir so
 // it survives cleanWs and build rotation. Log scale: series on one plot span
-// orders of magnitude (XOR ~600 MB/s next to AES ~1 MB/s).
+// orders of magnitude (XOR ~600 MB/s next to AES ~30 MB/s).
 def plotBench(String file, String title, String unit) {
     plot(
         csvFileName: "plot-bench-${file}.csv",
@@ -66,6 +66,9 @@ pipeline {
         // agent's workDir, which is the persistent rust_agent_workspace
         // volume (docker-compose.yml), so records survive builds and restarts.
         BENCH_RECORDS = '/home/jenkins/agent/bench-records/cryptography-nightly.csv'
+        // Roundtrip property cases per cryptosystem in the Stress tests stage,
+        // 100x the per-PR default (crates/my_pgp/tests/roundtrip/prng.rs).
+        PROPERTY_CASES = '100000'
     }
 
     stages {
