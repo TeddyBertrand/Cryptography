@@ -1,3 +1,5 @@
+import groovy.transform.Field
+
 // Nightly run (cron trigger in seed-job.yaml): benchmarks and the slow
 // release suite, too slow for every push. Bench medians are plotted build
 // over build by the Plot plugin.
@@ -20,6 +22,36 @@ def plotBench(String file, String title, String unit) {
     )
 }
 
+// Filled by the Records and Stress tests stages for the Discord report;
+// @Field script fields rather than locals so every stage and method sees
+// them (a bare assignment would go through the binding, which Jenkins warns
+// about). Null when the build stops before their stage.
+@Field def benchReport = null
+@Field def stressResult = null
+
+// Best-effort: see discord.groovy.
+def reportDiscord() {
+    try {
+        // Plain loop: collection methods taking a closure (count, findAll)
+        // misbehave under the CPS transform.
+        def records = 0
+        def regressions = 0
+        for (line in (benchReport ?: '').split('\n')) {
+            if (line.contains('NEW PB')) records++
+            if (line.contains('REGRESSION')) regressions++
+        }
+        def description = benchReport ? "```\n${benchReport.trim()}\n```" : 'Benchmarks not run'
+        def discord = load 'ci/jenkins/jenkinsfiles/discord.groovy'
+        discord.send(description, [
+            discord.field('Stress tests', stressResult ?: 'not run'),
+            discord.field('New PBs', "${records}"),
+            discord.field('Regressions', "${regressions}")
+        ])
+    } catch (err) {
+        echo "Discord report not sent: ${err.message}"
+    }
+}
+
 pipeline {
     agent { label 'rust-agent' }
 
@@ -30,6 +62,10 @@ pipeline {
 
     environment {
         BENCH_SAMPLES = '10'
+        // Best-ever medians, outside the workspace (cleanWs) but inside the
+        // agent's workDir, which is the persistent rust_agent_workspace
+        // volume (docker-compose.yml), so records survive builds and restarts.
+        BENCH_RECORDS = '/home/jenkins/agent/bench-records/cryptography-nightly.csv'
     }
 
     stages {
@@ -39,6 +75,16 @@ pipeline {
                     mkdir -p target/bench
                     cargo run --release --bin bench "$BENCH_SAMPLES" > target/bench/bench.csv
                 '''
+            }
+        }
+        stage('Records') {
+            steps {
+                script {
+                    benchReport = sh(
+                        script: 'sh ci/jenkins/scripts/bench-records.sh target/bench/bench.csv "$BENCH_RECORDS"',
+                        returnStdout: true
+                    )
+                }
             }
         }
         stage('Plot') {
@@ -61,7 +107,11 @@ pipeline {
         }
         stage('Stress tests') {
             steps {
-                sh 'cargo test --workspace --release -- --include-ignored'
+                script {
+                    stressResult = 'failed'
+                    sh 'cargo test --workspace --release -- --include-ignored'
+                    stressResult = 'passed'
+                }
             }
         }
     }
@@ -69,6 +119,11 @@ pipeline {
     post {
         always {
             archiveArtifacts artifacts: 'target/bench/*.csv', allowEmptyArchive: true
+            reportDiscord()
+        }
+        // cleanup runs after every other post condition, so the report
+        // above still has the workspace (discord.groovy).
+        cleanup {
             cleanWs()
         }
     }

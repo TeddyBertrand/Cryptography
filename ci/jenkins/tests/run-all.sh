@@ -17,5 +17,7 @@ sh tests/basic/plugins-installed.sh
 sh tests/project/seed-job-exists.sh
 sh tests/project/jenkinsfile-lint.sh
 sh tests/project/webhook-config.sh
+sh tests/project/discord-credential.sh
+sh tests/project/badge-anonymous.sh
 
 echo "All JCasC tests passed."

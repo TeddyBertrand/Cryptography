@@ -10,3 +10,7 @@ jenkins:
       permissions:
         - "Overall/Administer:${JENKINS_ADMIN_ID:-admin}"
         - "Overall/Read:authenticated"
+        # Build status badge (embeddable-build-status) readable without a
+        # login, so it renders as a README image. Grants the badge only, not
+        # the job pages.
+        - "Job/ViewStatus:anonymous"

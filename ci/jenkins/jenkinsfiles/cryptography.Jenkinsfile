@@ -1,3 +1,5 @@
+import groovy.transform.Field
+
 // Plain pipelineJob (not multibranch): githubNotify can't infer the repo
 // from the SCM source, so account/repo/sha are passed explicitly.
 def notifyGitHub(String status, String description) {
@@ -15,6 +17,30 @@ def notifyGitHub(String status, String description) {
         )
     } catch (err) {
         echo "GitHub status not posted: ${err.message}"
+    }
+}
+
+// Filled by the Test and Coverage stages for the Discord report; @Field
+// script fields rather than locals so every stage and method sees them (a
+// bare assignment would go through the binding, which Jenkins warns about).
+// They stay null when the build stops before their stage.
+@Field def testSummary = null
+@Field def lineCoverage = null
+
+// Best-effort like notifyGitHub: see discord.groovy.
+def reportDiscord() {
+    try {
+        def commit = sh(script: 'git log -1 --format="%h %s"', returnStdout: true).trim()
+        def tests = testSummary == null ? 'not run' :
+            "${testSummary.passCount} passed, ${testSummary.failCount} failed, ${testSummary.skipCount} skipped"
+        def coverage = lineCoverage == null ? 'not run' : "${lineCoverage}% lines"
+        def discord = load 'ci/jenkins/jenkinsfiles/discord.groovy'
+        discord.send("`${commit}`", [
+            discord.field('Tests', tests),
+            discord.field('Coverage', coverage)
+        ])
+    } catch (err) {
+        echo "Discord report not sent: ${err.message}"
     }
 }
 
@@ -52,7 +78,9 @@ pipeline {
             }
             post {
                 always {
-                    junit 'target/nextest/ci/junit.xml'
+                    script {
+                        testSummary = junit 'target/nextest/ci/junit.xml'
+                    }
                 }
             }
         }
@@ -67,6 +95,13 @@ pipeline {
         stage('Coverage') {
             steps {
                 sh 'mkdir -p target/coverage && cargo llvm-cov --workspace --cobertura --output-path target/coverage/cobertura.xml'
+                // The root <coverage> element's line-rate is the first one.
+                script {
+                    lineCoverage = sh(
+                        script: '''grep -o 'line-rate="[0-9.]*"' target/coverage/cobertura.xml | head -n 1 | cut -d'"' -f2 | awk '{ printf "%.1f", $1 * 100 }' ''',
+                        returnStdout: true
+                    ).trim() ?: null
+                }
             }
             post {
                 always {
@@ -117,6 +152,11 @@ pipeline {
             notifyGitHub('FAILURE', 'Build failed')
         }
         always {
+            reportDiscord()
+        }
+        // cleanup runs after every other post condition, so the report
+        // above still has the workspace (git log, discord.groovy).
+        cleanup {
             cleanWs()
         }
     }

@@ -108,6 +108,57 @@ check reflecting the build result.
 Branches > Branch protection rules** — a GitHub repo setting, not something
 this config can set.
 
+## Build notifications
+
+Every build posts a report to a Discord channel, as an embed colored by
+result (green, yellow for unstable, red) and linking to the build:
+
+- `cryptography-dev`/`cryptography-main`: commit, tests passed/failed/skipped
+  (from the `junit` step), line coverage (from `cobertura.xml`) and duration.
+- `cryptography-nightly`: every benchmark median next to its personal best,
+  `NEW PB` / `REGRESSION -N%` flags, the stress test result and duration.
+
+Both Jenkinsfiles `load` the shared `jenkinsfiles/discord.groovy` helper from
+the workspace in `post { always }`. Posting is best-effort: a Discord outage
+or a bad URL never changes the build result.
+
+Personal bests are tracked by `scripts/bench-records.sh`: `ms` is
+lower-is-better, `MB/s` and `ops/s` higher-is-better, and a median more than
+`BENCH_REGRESSION_PCT` percent (default 10) worse than its best is flagged.
+Records live in `/home/jenkins/agent/bench-records/` on the agent, inside
+the persistent `rust_agent_workspace` volume, so they survive `cleanWs` and
+restarts; the first nightly run marks everything `first run`. Delete the
+file to reset them (`docker compose down -v` also wipes them).
+
+One manual step: in the Discord channel, **Edit Channel > Integrations >
+Webhooks > New Webhook**, copy its URL into `ci/jenkins/.env` as
+`DISCORD_WEBHOOK_URL`, then recreate the controller so JCasC reloads the
+`discord-webhook-url` credential
+(`casc/projects/cryptography/credentials.yaml`):
+```
+docker compose -f ci/jenkins/docker-compose.yml up -d jenkins
+```
+Left empty, the report is skipped.
+
+## Build status badge
+
+The `embeddable-build-status` plugin serves each job's status as an SVG at
+`/buildStatus/icon?job=<job>`. `core/security.yaml` grants `Job/ViewStatus`
+to anonymous users, so the badge loads without a login while the job pages
+themselves stay private.
+
+| Job | Status |
+|---|---|
+| `cryptography-dev` | [![cryptography-dev](http://localhost:8080/buildStatus/icon?job=cryptography-dev)](http://localhost:8080/job/cryptography-dev/) |
+| `cryptography-main` | [![cryptography-main](http://localhost:8080/buildStatus/icon?job=cryptography-main)](http://localhost:8080/job/cryptography-main/) |
+
+The badges point at the local controller, so they render only in a local
+Markdown preview while the stack is up; on GitHub they show as broken
+images. GitHub fetches README images from its own servers and the controller
+is not publicly exposed (smee.io only forwards webhooks inbound) — a public
+badge would need a tunnel, deliberately left out to keep the Jenkins UI off
+the internet.
+
 ## Coverage and build artifact
 
 The `cryptography.Jenkinsfile` pipeline runs `cargo llvm-cov` (installed in
@@ -160,11 +211,12 @@ Two tiers, under `ci/jenkins/tests/`:
   `cryptography-main` and `cryptography-nightly` seed jobs exist and are
   buildable, the nightly one has its cron trigger, every Jenkinsfile passes
   Jenkins' built-in Declarative Pipeline validator, the dev/main
-  jobs have a `githubPush` trigger configured, and the
-  `github-status-token` credential is present. A real end-to-end webhook
-  delivery and status check can't be scripted here (needs a live smee.io
-  channel and a real GitHub push) — verify that manually per the webhook
-  section above.
+  jobs have a `githubPush` trigger configured, the `github-status-token`
+  and `discord-webhook-url` credentials are present, and the dev/main
+  badges are served anonymously. A real end-to-end webhook delivery, status
+  check or Discord notification can't be scripted here (needs a live
+  smee.io channel, a real GitHub push and a Discord webhook) — verify those
+  manually per the sections above.
 
 Run everything hermetically (brings the stack up, tests it, tears it down):
 ```
