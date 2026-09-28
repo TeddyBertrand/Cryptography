@@ -18,26 +18,26 @@ def notifyGitHub(String status, String description) {
     }
 }
 
-// Best-effort like notifyGitHub. An empty webhook URL (DISCORD_WEBHOOK_URL
-// unset in .env) skips silently. The message goes through the environment
-// and the secret through withCredentials, so neither is Groovy-interpolated
-// into the shell script.
-def notifyDiscord(String message) {
+// Filled by the Test and Coverage stages for the Discord report; unassigned
+// (no `def`) so they live in the script binding, visible from every stage.
+// They stay null when the build stops before their stage.
+testSummary = null
+lineCoverage = null
+
+// Best-effort like notifyGitHub: see discord.groovy.
+def reportDiscord() {
     try {
-        withCredentials([string(credentialsId: 'discord-webhook-url', variable: 'DISCORD_WEBHOOK_URL')]) {
-            withEnv(["DISCORD_MESSAGE=${message}"]) {
-                sh '''
-                    if [ -z "$DISCORD_WEBHOOK_URL" ]; then
-                        echo "Discord webhook not configured, skipping"
-                        exit 0
-                    fi
-                    printf '{"content":"%s"}' "$DISCORD_MESSAGE" |
-                        curl -sSf -H 'Content-Type: application/json' -d @- "$DISCORD_WEBHOOK_URL"
-                '''
-            }
-        }
+        def commit = sh(script: 'git log -1 --format="%h %s"', returnStdout: true).trim()
+        def tests = testSummary == null ? 'not run' :
+            "${testSummary.passCount} passed, ${testSummary.failCount} failed, ${testSummary.skipCount} skipped"
+        def coverage = lineCoverage == null ? 'not run' : "${lineCoverage}% lines"
+        def discord = load 'ci/jenkins/jenkinsfiles/discord.groovy'
+        discord.send("`${commit}`", [
+            discord.field('Tests', tests),
+            discord.field('Coverage', coverage)
+        ])
     } catch (err) {
-        echo "Discord notification not sent: ${err.message}"
+        echo "Discord report not sent: ${err.message}"
     }
 }
 
@@ -75,7 +75,9 @@ pipeline {
             }
             post {
                 always {
-                    junit 'target/nextest/ci/junit.xml'
+                    script {
+                        testSummary = junit 'target/nextest/ci/junit.xml'
+                    }
                 }
             }
         }
@@ -90,6 +92,13 @@ pipeline {
         stage('Coverage') {
             steps {
                 sh 'mkdir -p target/coverage && cargo llvm-cov --workspace --cobertura --output-path target/coverage/cobertura.xml'
+                // The root <coverage> element's line-rate is the first one.
+                script {
+                    lineCoverage = sh(
+                        script: '''grep -o 'line-rate="[0-9.]*"' target/coverage/cobertura.xml | head -n 1 | cut -d'"' -f2 | awk '{ printf "%.1f", $1 * 100 }' ''',
+                        returnStdout: true
+                    ).trim() ?: null
+                }
             }
             post {
                 always {
@@ -138,12 +147,13 @@ pipeline {
         }
         failure {
             notifyGitHub('FAILURE', 'Build failed')
-            notifyDiscord(":red_circle: ${env.JOB_NAME} #${env.BUILD_NUMBER} failed: ${env.BUILD_URL}")
-        }
-        fixed {
-            notifyDiscord(":green_circle: ${env.JOB_NAME} #${env.BUILD_NUMBER} is back to green: ${env.BUILD_URL}")
         }
         always {
+            reportDiscord()
+        }
+        // cleanup runs after every other post condition, so the report
+        // above still has the workspace (git log, discord.groovy).
+        cleanup {
             cleanWs()
         }
     }
