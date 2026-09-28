@@ -201,9 +201,23 @@ fn pad(limbs: &[u64], k: usize) -> Vec<u64> {
     padded
 }
 
+/// Copies `table[index]` into `out` by OR-ing every entry under a mask, so the memory access
+/// pattern is the same whatever `index` is. Entries are `k`-limb Montgomery values.
+pub(crate) fn select(table: &[Vec<u64>], index: usize, out: &mut Vec<u64>) {
+    let limbs = reset(out, table[0].len());
+    for (position, entry) in table.iter().enumerate() {
+        // Opaque to the optimizer: seeing a 0/all-ones mask, LLVM rebuilds `if position ==
+        // index` and the branch predictor then leaks the exponent (`bench --bin timing`).
+        let mask = std::hint::black_box(0u64.wrapping_sub((position == index) as u64));
+        for (limb, &value) in limbs.iter_mut().zip(entry) {
+            *limb |= value & mask;
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::Montgomery;
+    use super::{select, Montgomery};
     use crate::tests::{next_u64, random_biguint, random_odd_modulus};
     use crate::BigUint;
 
@@ -248,6 +262,16 @@ mod tests {
             }
             let max = mont.to_mont(&(&n - &BigUint::from_u64(1)));
             assert_eq!(mont.square(&max), mont.mul(&max, &max));
+        }
+    }
+
+    #[test]
+    fn select_copies_only_the_chosen_entry() {
+        let table: Vec<Vec<u64>> = (0..8u64).map(|i| vec![i, i << 32, !i]).collect();
+        let mut out = vec![u64::MAX; 5];
+        for (index, entry) in table.iter().enumerate() {
+            select(&table, index, &mut out);
+            assert_eq!(&out, entry);
         }
     }
 
