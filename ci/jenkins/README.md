@@ -91,6 +91,17 @@ check reflecting the build result.
 Branches > Branch protection rules** — a GitHub repo setting, not something
 this config can set.
 
+## Epitech dump check
+
+Both `.github/workflows/ci.yml` (`epitest-dump` job) and the
+`cryptography.Jenkinsfile` (`Epitech dump check` stage) rebuild and run the
+functional suite inside `epitechcontent/epitest-docker`, the actual grading
+environment, catching toolchain drift (Fedora, `make`) that the Nix/rust-agent
+checks wouldn't see. The Jenkins stage runs in its own `docker { image ... }`
+agent (`docker-workflow` plugin), so the `rust-agent` node needs a Docker
+daemon reachable (Docker-in-Docker or a mounted socket) — not something JCasC
+can configure.
+
 ## Running the tests
 
 Two tiers, under `ci/jenkins/tests/`:

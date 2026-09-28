@@ -49,6 +49,18 @@ pipeline {
                 '''
             }
         }
+        stage('Epitech dump check') {
+            agent {
+                docker { image 'epitechcontent/epitest-docker' }
+            }
+            steps {
+                sh '''
+                    make re
+                    ./my_pgp -h
+                    cargo test --workspace
+                '''
+            }
+        }
     }
 
     post {
