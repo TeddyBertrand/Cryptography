@@ -113,7 +113,7 @@ Dev shell via `flake.nix` — CI's `build-test-lint` and `retrocompat` jobs run 
 
 - Any error → message on stderr, exit `core::EXIT_CODE` (84).
 - Byte order: every CLI number/key/ciphertext is little-endian hex (`encoding`). AES converts per 32-bit word (`aes::reverse_words`); OAEP and signature blocks are big-endian per RFC 8017 and get reversed at the `BigUint` boundary.
-- I/O: one trailing `\n` (or `\r\n`) is stripped from stdin; one-line outputs end with `\n`.
+- I/O: ciphered output is hex lines ending in `\n`. Block mode (`-b`) and RSA strip one trailing `\n` (or `\r\n`) from the message and end deciphered output with `\n`; stream mode (`xor`/`aes`/`pgp-*` without `-b`) and X25519 cipher the whole input, line feeds included, and decipher it back as is.
 - XOR/AES stream mode zero-pads and deciphering strips trailing zero bytes, so messages ending in `\0` don't round-trip; property tests compare through `without_trailing_zeros`.
 - Minimum modulus: `-p` (OAEP) needs ≥ 66 bytes, `-s` ≥ 62 bytes. The subject's 512-bit keys fail `-p`; test with `rsa --bits 1024` keys.
 - Bonuses live in the main binary; there is no `bonus/` directory (README "Delivery" section).
