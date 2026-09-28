@@ -67,6 +67,16 @@ pipeline {
         stage('Archive artifact') {
             steps {
                 archiveArtifacts artifacts: 'my_pgp', fingerprint: true
+        stage('Epitech dump check') {
+            agent {
+                docker { image 'epitechcontent/epitest-docker' }
+            }
+            steps {
+                sh '''
+                    make re
+                    ./my_pgp -h
+                    cargo test --workspace
+                '''
             }
         }
     }

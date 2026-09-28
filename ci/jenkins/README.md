@@ -98,6 +98,16 @@ the agent image, a tool not a crate dependency) to produce a Cobertura
 report, published via the Coverage plugin's `recordCoverage` step. The build
 turns unstable if line coverage drops below 70%. The `my_pgp` binary is then
 archived with `archiveArtifacts` and downloadable from each build's page.
+## Epitech dump check
+
+Both `.github/workflows/ci.yml` (`epitest-dump` job) and the
+`cryptography.Jenkinsfile` (`Epitech dump check` stage) rebuild and run the
+functional suite inside `epitechcontent/epitest-docker`, the actual grading
+environment, catching toolchain drift (Fedora, `make`) that the Nix/rust-agent
+checks wouldn't see. The Jenkins stage runs in its own `docker { image ... }`
+agent (`docker-workflow` plugin), so the `rust-agent` node needs a Docker
+daemon reachable (Docker-in-Docker or a mounted socket) — not something JCasC
+can configure.
 
 ## Running the tests
 
