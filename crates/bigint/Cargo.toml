@@ -3,5 +3,8 @@ name = "bigint"
 version.workspace = true
 edition.workspace = true
 
+[dependencies]
+encoding = { path = "../encoding" }
+
 [lints]
 workspace = true
