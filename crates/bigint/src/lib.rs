@@ -1,6 +1,8 @@
 use std::cmp::Ordering;
 use std::ops::{Add, Div, Mul, Rem, Sub};
 
+mod montgomery;
+
 /// Arbitrary-precision unsigned integer.
 ///
 /// Stored as little-endian `u64` limbs with no trailing zero limb
@@ -321,7 +323,68 @@ impl BigUint {
             return Ok(Self::zero());
         }
 
-        self.modpow_generic(exponent, modulus)
+        if modulus.limbs[0] & 1 == 1 {
+            self.modpow_montgomery(exponent, modulus)
+        } else {
+            self.modpow_generic(exponent, modulus)
+        }
+    }
+
+    fn bit(&self, index: usize) -> bool {
+        self.limbs
+            .get(index / 64)
+            .is_some_and(|limb| (limb >> (index % 64)) & 1 == 1)
+    }
+
+    /// Sliding-window exponentiation in Montgomery form; `modulus` must be odd and > 1.
+    fn modpow_montgomery(&self, exponent: &Self, modulus: &Self) -> Result<Self, String> {
+        let mont = montgomery::Montgomery::new(modulus);
+        let base = mont.to_mont(&self.checked_divmod(modulus)?.1);
+
+        let bits = exponent.bits();
+        let window = match bits {
+            b if b > 512 => 5,
+            b if b > 128 => 4,
+            b if b > 32 => 3,
+            _ => 1,
+        };
+
+        let base_squared = mont.square(&base);
+        let mut odd_powers = Vec::with_capacity(1 << (window - 1));
+        odd_powers.push(base);
+        for index in 1..(1 << (window - 1)) {
+            let next = mont.mul(&odd_powers[index - 1], &base_squared);
+            odd_powers.push(next);
+        }
+
+        let mut acc = mont.one();
+        let mut scratch = Vec::new();
+        let mut index = bits;
+        while index > 0 {
+            if !exponent.bit(index - 1) {
+                mont.square_into(&acc, &mut scratch);
+                std::mem::swap(&mut acc, &mut scratch);
+                index -= 1;
+                continue;
+            }
+
+            let mut start = index.saturating_sub(window);
+            while !exponent.bit(start) {
+                start += 1;
+            }
+
+            let mut value = 0usize;
+            for position in (start..index).rev() {
+                mont.square_into(&acc, &mut scratch);
+                std::mem::swap(&mut acc, &mut scratch);
+                value = (value << 1) | exponent.bit(position) as usize;
+            }
+            mont.mul_into(&acc, &odd_powers[value >> 1], &mut scratch);
+            std::mem::swap(&mut acc, &mut scratch);
+            index = start;
+        }
+
+        Ok(mont.out_of_mont(&acc))
     }
 
     fn modpow_generic(&self, exponent: &Self, modulus: &Self) -> Result<Self, String> {
@@ -687,6 +750,78 @@ mod tests {
         assert!(BigUint::from_u64(2)
             .modpow(&BigUint::from_u64(3), &BigUint::zero())
             .is_err());
+    }
+
+    pub(crate) fn random_odd_modulus(state: &mut u64, limbs: usize) -> BigUint {
+        let mut raw = random_biguint(state, limbs).limbs().to_vec();
+        raw.resize(limbs, 0);
+        raw[0] |= 1;
+        raw[limbs - 1] |= 1 << 63;
+        BigUint::from_limbs(raw)
+    }
+
+    #[test]
+    fn modpow_montgomery_matches_generic_on_seeded_random_cases() {
+        let mut state = 0xd1b54a32d192ed03u64;
+
+        for limbs in 1..=32 {
+            let modulus = random_odd_modulus(&mut state, limbs);
+            let one = BigUint::from_u64(1);
+            let exponents = [
+                BigUint::zero(),
+                one.clone(),
+                &modulus - &one,
+                random_biguint(&mut state, 1),
+                random_biguint(&mut state, limbs),
+            ];
+
+            for exponent in &exponents {
+                let base = random_biguint(&mut state, limbs + 1);
+                assert_eq!(
+                    base.modpow(exponent, &modulus).unwrap(),
+                    base.modpow_generic(exponent, &modulus).unwrap(),
+                    "mismatch for {limbs}-limb modulus"
+                );
+            }
+        }
+    }
+
+    #[test]
+    #[ignore = "timing check, run with --release -- --ignored"]
+    fn modpow_2048_bit_speedup() {
+        use std::time::Instant;
+
+        let mut state = 0x853c49e6748fea9bu64;
+        let modulus = random_odd_modulus(&mut state, 32);
+        let exponent = random_biguint(&mut state, 32);
+        let base = random_biguint(&mut state, 32);
+
+        assert_eq!(
+            base.modpow(&exponent, &modulus).unwrap(),
+            base.modpow_generic(&exponent, &modulus).unwrap()
+        );
+
+        // Best of several runs to filter scheduler noise.
+        let best = |run: &dyn Fn()| {
+            (0..10)
+                .map(|_| {
+                    let start = Instant::now();
+                    run();
+                    start.elapsed()
+                })
+                .min()
+                .unwrap()
+        };
+        let generic_time = best(&|| {
+            base.modpow_generic(&exponent, &modulus).unwrap();
+        });
+        let fast_time = best(&|| {
+            base.modpow(&exponent, &modulus).unwrap();
+        });
+
+        let speedup = generic_time.as_secs_f64() / fast_time.as_secs_f64();
+        println!("generic {generic_time:?}, montgomery {fast_time:?}, speedup {speedup:.2}x");
+        assert!(speedup >= 2.5, "speedup {speedup:.2}x below 2.5x");
     }
 
     #[test]
