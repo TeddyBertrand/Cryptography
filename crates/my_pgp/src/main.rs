@@ -110,9 +110,9 @@ fn run_x25519(command: &Command, message: Vec<u8>) -> Result<Vec<u8>> {
         .ok_or_else(|| Error::new("missing key"))?;
 
     match command.mode {
-        Mode::Cipher => {
-            Ok(hex::encode(&x25519::cipher(&message, key).map_err(Error::new)?).into_bytes())
-        }
+        Mode::Cipher => Ok(hex_line(
+            &x25519::cipher(&message, key).map_err(Error::new)?,
+        )),
         Mode::Decipher => {
             let encoded = std::str::from_utf8(&message)
                 .map_err(|_| Error::new("ciphertext must be UTF-8 hexadecimal text"))?;
@@ -137,12 +137,14 @@ fn run_rsa(command: &Command, mut message: Vec<u8>) -> Result<Vec<u8>> {
         Mode::Cipher => {
             let ciphertext =
                 rsa::cipher_hex(&message, &exponent, &n, padding).map_err(Error::new)?;
-            Ok(ciphertext.into_bytes())
+            Ok(with_trailing_lf(ciphertext.into_bytes()))
         }
         Mode::Decipher => {
             let ciphertext_hex = std::str::from_utf8(&message)
                 .map_err(|_| Error::new("ciphertext must be UTF-8 hexadecimal text"))?;
-            rsa::decipher_hex(ciphertext_hex, &exponent, &n, padding).map_err(Error::new)
+            rsa::decipher_hex(ciphertext_hex, &exponent, &n, padding)
+                .map(with_trailing_lf)
+                .map_err(Error::new)
         }
         Mode::Generate { .. } | Mode::GenerateX25519 | Mode::GenerateRandom { .. } => {
             unreachable!("run_command only dispatches cipher/decipher here")
@@ -181,7 +183,13 @@ fn run_pgp(
         Mode::Decipher => {
             let ciphertext_hex = std::str::from_utf8(&message)
                 .map_err(|_| Error::new("ciphertext must be UTF-8 hexadecimal text"))?;
-            decipher(ciphertext_hex, command.block, padding, key).map_err(Error::new)
+            let plaintext =
+                decipher(ciphertext_hex, command.block, padding, key).map_err(Error::new)?;
+            Ok(if strip_lf {
+                with_trailing_lf(plaintext)
+            } else {
+                plaintext
+            })
         }
         Mode::Generate { .. } | Mode::GenerateX25519 | Mode::GenerateRandom { .. } => {
             unreachable!("run_command only dispatches cipher/decipher here")
