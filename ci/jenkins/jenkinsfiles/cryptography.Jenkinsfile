@@ -67,6 +67,11 @@ pipeline {
                 sh 'cargo clippy --workspace -- -D warnings'
             }
         }
+        stage('Delivery tree') {
+            steps {
+                sh 'sh scripts/check_delivery.sh'
+            }
+        }
         stage('Build') {
             steps {
                 sh 'make re'
