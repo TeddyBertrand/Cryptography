@@ -121,6 +121,7 @@ dependencies = [
 name = "sign"
 version = "0.1.0"
 dependencies = [
+ "bigint",
  "hash",
  "rsa",
 ]

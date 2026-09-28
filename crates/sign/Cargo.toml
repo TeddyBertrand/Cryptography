@@ -9,3 +9,4 @@ workspace = true
 [dependencies]
 rsa = { path = "../rsa" }
 hash = { path = "../hash" }
+bigint = { path = "../bigint" }
