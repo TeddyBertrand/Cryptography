@@ -27,12 +27,16 @@ pub enum Mode {
     Cipher,
     Decipher,
     Generate { p: String, q: String },
+    GenerateX25519,
     GenerateRandom { bits: usize },
 }
 
 impl Mode {
     pub fn is_generate(&self) -> bool {
-        matches!(self, Self::Generate { .. } | Self::GenerateRandom { .. })
+        matches!(
+            self,
+            Self::Generate { .. } | Self::GenerateX25519 | Self::GenerateRandom { .. }
+        )
     }
 }
 
