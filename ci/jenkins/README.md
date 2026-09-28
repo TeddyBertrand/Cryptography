@@ -25,7 +25,7 @@ authoritative CI on PRs; this is an optional self-hosted mirror.
    cp ci/jenkins/.env.example ci/jenkins/.env
    ```
    Edit `JENKINS_ADMIN_PASSWORD` (and optionally `JENKINS_ADMIN_ID`,
-   `JENKINS_ADMIN_EMAIL`) in `ci/jenkins/.env`.
+   `JENKINS_ADMIN_EMAIL`) and `DOCKER_GID` in `ci/jenkins/.env`.
 
 2. Bring the controller up. JCasC applies automatically — no setup wizard,
    no manual node/job creation:
@@ -104,10 +104,14 @@ Both `.github/workflows/ci.yml` (`epitest-dump` job) and the
 `cryptography.Jenkinsfile` (`Epitech dump check` stage) rebuild and run the
 functional suite inside `epitechcontent/epitest-docker`, the actual grading
 environment, catching toolchain drift (Fedora, `make`) that the Nix/rust-agent
-checks wouldn't see. The Jenkins stage runs in its own `docker { image ... }`
-agent (`docker-workflow` plugin), so the `rust-agent` node needs a Docker
-daemon reachable (Docker-in-Docker or a mounted socket) — not something JCasC
-can configure.
+checks wouldn't see. The Jenkins stage runs in a `docker { image ... }`
+agent (`docker-workflow` plugin) on the same `rust-agent` node
+(`reuseNode true`). `rust-agent` ships the Docker CLI and talks to the host
+daemon through the mounted `/var/run/docker.sock`; set `DOCKER_GID` in
+`ci/jenkins/.env` to the host's docker group id
+(`getent group docker | cut -d: -f3`) so the `jenkins` user can use it. The
+agent workspace lives in the `rust_agent_workspace` volume so docker-workflow
+can share it with the grading container via `--volumes-from`.
 
 ## Running the tests
 
