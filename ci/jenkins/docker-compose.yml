@@ -14,6 +14,7 @@ services:
       - JENKINS_ADMIN_PASSWORD=${JENKINS_ADMIN_PASSWORD}
       - JENKINS_URL=${JENKINS_EXTERNAL_URL:-http://localhost:8080}
       - JENKINS_ADMIN_EMAIL=${JENKINS_ADMIN_EMAIL:-admin@example.invalid}
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
     volumes:
       - jenkins_home:/var/jenkins_home
     healthcheck:
