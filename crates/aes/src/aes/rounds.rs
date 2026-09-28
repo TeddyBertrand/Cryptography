@@ -1,9 +1,8 @@
-use core::{Bytes, Result};
+use super::{field, state::State};
 
-use super::{field, key_expansion, state::State};
-
-pub fn cipher(state: &mut State, key: &Bytes, round_count: usize) -> Result<()> {
-    let round_keys = key_expansion::expand(key, round_count)?;
+/// Ciphers one block with the round keys of an expanded key (`rounds + 1` of them).
+pub fn cipher(state: &mut State, round_keys: &[[u8; 16]]) {
+    let round_count = round_keys.len() - 1;
     add_round_key(state, &round_keys[0]);
 
     for round_key in &round_keys[1..round_count] {
@@ -16,11 +15,11 @@ pub fn cipher(state: &mut State, key: &Bytes, round_count: usize) -> Result<()> 
     substitute_bytes(state);
     shift_rows(state);
     add_round_key(state, &round_keys[round_count]);
-    Ok(())
 }
 
-pub fn decipher(state: &mut State, key: &Bytes, round_count: usize) -> Result<()> {
-    let round_keys = key_expansion::expand(key, round_count)?;
+/// Deciphers one block with the round keys of an expanded key (`rounds + 1` of them).
+pub fn decipher(state: &mut State, round_keys: &[[u8; 16]]) {
+    let round_count = round_keys.len() - 1;
     add_round_key(state, &round_keys[round_count]);
 
     for round in (1..round_count).rev() {
@@ -33,7 +32,6 @@ pub fn decipher(state: &mut State, key: &Bytes, round_count: usize) -> Result<()
     inverse_shift_rows(state);
     inverse_substitute_bytes(state);
     add_round_key(state, &round_keys[0]);
-    Ok(())
 }
 
 fn add_round_key(state: &mut State, round_key: &[u8; 16]) {
@@ -117,7 +115,8 @@ fn inverse_mix_columns(state: &mut State) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::aes::block;
+    use crate::aes::{block, key_expansion};
+    use core::Bytes;
 
     struct Vector {
         key: &'static str,
@@ -211,11 +210,12 @@ mod tests {
     }
 
     fn assert_full_cipher(vector: &Vector) {
+        let round_keys = key_expansion::expand(&key(vector), 10).unwrap();
         let mut state = block(vector.input);
-        cipher(&mut state, &key(vector), 10).unwrap();
+        cipher(&mut state, &round_keys);
         assert_eq!(state, block(vector.output));
 
-        decipher(&mut state, &key(vector), 10).unwrap();
+        decipher(&mut state, &round_keys);
         assert_eq!(state, block(vector.input));
     }
 
