@@ -5,10 +5,27 @@ as code (JCasC — Jenkins Configuration as Code) so there is no click-ops:
 security, plugins, the agent node and the `cryptography-dev`/`cryptography-main`
 pipeline jobs are all
 baked into the controller image and re-applied on every boot. This mirrors
-the same checks as `.github/workflows/ci.yml`: `cargo fmt --all -- --check`,
-`cargo build --workspace`, `cargo test --workspace`,
-`cargo clippy --workspace -- -D warnings`. GitHub Actions stays the
+the checks of `.github/workflows/ci.yml` (see [Parity with GitHub
+Actions](#parity-with-github-actions)). GitHub Actions stays the
 authoritative CI on PRs; this is an optional self-hosted mirror.
+
+## Parity with GitHub Actions
+
+| Check | GitHub Actions (`ci.yml`) | Jenkins (`cryptography.Jenkinsfile`) |
+|---|---|---|
+| `cargo fmt --all -- --check` | `build-test-lint` / Format check | Format |
+| `cargo clippy --workspace -- -D warnings` | `build-test-lint` / Clippy | Lint |
+| Debug build | `build-test-lint` / Build (`cargo build`) | Build (`make re`, release) |
+| `cargo test --workspace` | `build-test-lint` / Test | Test (`cargo nextest`, JUnit report) |
+| `make re` in grading image | `epitest-dump` / Build (make re) | Epitech dump check |
+| `test -x ./my_pgp && ./my_pgp -h` | `epitest-dump` / Delivery check | Delivery check + Epitech dump check |
+| Functional suite in grading image | `epitest-dump` / Functional suite | Epitech dump check |
+| `cargo test --release -- --include-ignored` | `epitest-dump` / Release suite | Epitech dump check |
+| Coverage (`cargo llvm-cov`, 70% gate) | — | Coverage |
+| Archive `my_pgp` artifact | — | Archive artifact |
+
+Coverage and artifact archiving are Jenkins-only; everything else fails the
+build on both sides.
 
 ## Prerequisites
 
