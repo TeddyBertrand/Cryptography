@@ -141,6 +141,15 @@ The key schedule reuses `substitute`, so it is covered too.
 Side effect: throughput went up about 20% (see below). The fixed 8-step loop has no
 mispredicted branches.
 
+**Update (#114).** `SubBytes` no longer computes `x^254` byte by byte. The 16 state bytes are
+transposed into 8 bit planes and go through Boyar and Peralta's 128-gate S-box circuit
+(`aes::aes::sbox`): AND, XOR and NOT only, so there is still no table, no branch and no
+data-dependent memory access. The inverse S-box wraps the same circuit in the inverse affine
+map, and `MixColumns` uses `xtime` chains. The key schedule still uses `field::substitute`,
+now once per key instead of once per block. The harness still finds no leak
+(`aes-128-key` `t = −1.13`, `aes-128-plaintext` `t = 0.29`), and AES-128 went from about 1.3
+to 36 MB/s.
+
 ### 5. X25519 (`x25519`)
 
 Already correct:
