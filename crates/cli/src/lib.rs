@@ -28,15 +28,27 @@ where
             p: p.clone(),
             q: q.clone(),
         },
+        (Some(spec::BITS), _) => Mode::GenerateRandom {
+            bits: matches
+                .value(spec::BITS)
+                .and_then(|bits| bits.parse().ok())
+                .ok_or_else(|| Error::new("invalid key size"))?,
+        },
         _ => return Err(Error::new("missing MODE")),
     };
 
-    if matches!(mode, Mode::Generate { .. }) && system != CryptoSystem::Rsa {
-        return Err(Error::new("'-g' is only available with rsa"));
+    if system != CryptoSystem::Rsa {
+        match mode {
+            Mode::Generate { .. } => return Err(Error::new("'-g' is only available with rsa")),
+            Mode::GenerateRandom { .. } => {
+                return Err(Error::new("'--bits' is only available with rsa"))
+            }
+            Mode::Cipher | Mode::Decipher => {}
+        }
     }
 
     let key = matches.value(spec::KEY).map(String::from);
-    if key.is_none() && !matches!(mode, Mode::Generate { .. }) {
+    if key.is_none() && !mode.is_generate() {
         return Err(Error::new("missing key"));
     }
 
@@ -127,6 +139,35 @@ Cipher or decipher MESSAGE using a given CRYPTO_SYSTEM. The MESSAGE is read from
             }
         );
         assert_eq!(cmd.key, None);
+    }
+
+    #[test]
+    fn rsa_generate_random() {
+        let cmd = command(&["rsa", "--bits", "512"]);
+        assert_eq!(cmd.system, CryptoSystem::Rsa);
+        assert_eq!(cmd.mode, Mode::GenerateRandom { bits: 512 });
+        assert_eq!(cmd.key, None);
+    }
+
+    #[test]
+    fn invalid_generate_random_forms_are_errors() {
+        assert_eq!(
+            run(&["xor", "--bits", "512"]),
+            Err(Error::new("'--bits' is only available with rsa"))
+        );
+        assert_eq!(
+            run(&["rsa", "--bits", "abc"]),
+            Err(Error::new("invalid key size"))
+        );
+        let invalid: &[&[&str]] = &[
+            &["rsa", "--bits"],
+            &["rsa", "--bits", "512", "k"],
+            &["rsa", "-g", "d3", "e3", "--bits", "512"],
+            &["rsa", "-c", "--bits", "512"],
+        ];
+        for args in invalid {
+            assert!(run(args).is_err(), "expected error for {args:?}");
+        }
     }
 
     #[test]

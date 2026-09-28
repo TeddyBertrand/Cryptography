@@ -27,10 +27,14 @@ fn run(args: &[&str], input: &[u8]) -> Output {
 }
 
 fn generate(p: &str, q: &str) -> (String, String) {
-    let output = run(&["rsa", "-g", p, q], b"");
+    generate_with(&["rsa", "-g", p, q])
+}
+
+fn generate_with(args: &[&str]) -> (String, String) {
+    let output = run(args, b"");
     assert!(
         output.status.success(),
-        "keygen failed for p={p} q={q}: {}",
+        "keygen failed for {args:?}: {}",
         String::from_utf8_lossy(&output.stderr)
     );
 
@@ -52,21 +56,66 @@ fn generate(p: &str, q: &str) -> (String, String) {
 
 fn roundtrips(p: &str, q: &str, message: &[u8]) {
     let (public_key, private_key) = generate(p, q);
+    roundtrips_with_keys(&public_key, &private_key, message);
+}
 
-    let ciphered = run(&["rsa", "-c", &public_key], message);
+fn roundtrips_with_keys(public_key: &str, private_key: &str, message: &[u8]) {
+    let ciphered = run(&["rsa", "-c", public_key], message);
     assert!(
         ciphered.status.success(),
-        "cipher failed for p={p} q={q}: {}",
+        "cipher failed with {public_key}: {}",
         String::from_utf8_lossy(&ciphered.stderr)
     );
 
-    let deciphered = run(&["rsa", "-d", &private_key], &ciphered.stdout);
+    let deciphered = run(&["rsa", "-d", private_key], &ciphered.stdout);
     assert!(
         deciphered.status.success(),
-        "decipher failed for p={p} q={q}: {}",
+        "decipher failed with {private_key}: {}",
         String::from_utf8_lossy(&deciphered.stderr)
     );
     assert_eq!(deciphered.stdout, message);
+}
+
+/// Bit length of a minimal little-endian hex number.
+fn hex_bits(hex: &str) -> usize {
+    let top = u8::from_str_radix(&hex[hex.len() - 2..], 16).expect("valid hex");
+    hex.len() / 2 * 8 - top.leading_zeros() as usize
+}
+
+#[test]
+fn generates_random_keys_of_requested_size_that_roundtrip() {
+    for (bits, message) in [
+        ("64", &b"WF"[..]),
+        ("512", &b"The night is dark and full of terrors"[..]),
+    ] {
+        let (public_key, private_key) = generate_with(&["rsa", "--bits", bits]);
+
+        let modulus = public_key
+            .split_once('-')
+            .expect("key has exponent-modulus")
+            .1;
+        assert_eq!(hex_bits(modulus).to_string(), bits, "wrong modulus size");
+        assert!(
+            private_key.ends_with(modulus),
+            "keys must share the modulus"
+        );
+
+        roundtrips_with_keys(&public_key, &private_key, message);
+    }
+}
+
+#[test]
+fn random_keys_differ_between_runs() {
+    assert_ne!(
+        generate_with(&["rsa", "--bits", "128"]),
+        generate_with(&["rsa", "--bits", "128"])
+    );
+}
+
+#[test]
+fn rejects_invalid_random_key_size() {
+    let output = run(&["rsa", "--bits", "15"], b"");
+    assert_eq!(output.status.code(), Some(84));
 }
 
 #[test]

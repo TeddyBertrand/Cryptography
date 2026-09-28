@@ -25,6 +25,13 @@ pub enum Mode {
     Cipher,
     Decipher,
     Generate { p: String, q: String },
+    GenerateRandom { bits: usize },
+}
+
+impl Mode {
+    pub fn is_generate(&self) -> bool {
+        matches!(self, Self::Generate { .. } | Self::GenerateRandom { .. })
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

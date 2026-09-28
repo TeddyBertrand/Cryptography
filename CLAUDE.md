@@ -64,7 +64,7 @@ Depend on the above:
 - `crates/prime` (-> bigint, random) — Miller-Rabin + random prime generation (bonus). #48
 - `crates/xor` (-> core, encoding) — XOR block/stream cipher. #9, #25, #26
 - `crates/aes` (-> core, encoding) — AES-128/192/256 key expansion + block/stream cipher. #9, #27-30, #46
-- `crates/rsa` (-> bigint, encoding) — RSA keygen (Carmichael, Fermat e), cipher/decipher. #11, #38-40, #49
+- `crates/rsa` (-> bigint, encoding, prime, random) — RSA keygen (Carmichael, Fermat e), cipher/decipher, keygen from random primes. #11, #38-40, #49
 - `crates/hash` (-> encoding) — SHA-256 (bonus). #54
 - `crates/x25519` (-> encoding, random) — 2nd asymmetric system: GF(2^255-19), Montgomery ladder (bonus). #13, #55-57
 

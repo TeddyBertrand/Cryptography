@@ -5,6 +5,7 @@ pub const MODE: &str = "mode";
 pub const CIPHER: &str = "cipher";
 pub const DECIPHER: &str = "decipher";
 pub const GENERATE: &str = "generate";
+pub const BITS: &str = "bits";
 pub const BLOCK: &str = "block";
 pub const KEY: &str = "key";
 
@@ -57,6 +58,14 @@ pub fn parser() -> Parser {
                 ),
         )
         .arg(
+            Arg::flag(BITS, "--bits")
+                .values(&["N"])
+                .section("MODE")
+                .group(MODE)
+                .hidden(true)
+                .help("RSA only: generate a key pair with an N-bit modulus from random primes"),
+        )
+        .arg(
             Arg::flag(BLOCK, "-b").section("OPTIONS").help(
                 "for XOR, AES and PGP, only works on one block. The MESSAGE and the symmetric\n\
                  key must be the same size",
@@ -65,6 +74,7 @@ pub fn parser() -> Parser {
         .arg(
             Arg::positional(KEY, "key")
                 .conflicts_with(GENERATE)
+                .conflicts_with(BITS)
                 .help("Key used to cipher/decipher MESSAGE (incompatible with -g MODE)"),
         )
 }

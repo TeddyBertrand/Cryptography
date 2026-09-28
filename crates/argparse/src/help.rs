@@ -73,7 +73,7 @@ impl Parser {
 
     fn blocks(&self) -> Vec<Block<'_>> {
         let mut blocks: Vec<Block<'_>> = Vec::new();
-        for arg in &self.args {
+        for arg in self.args.iter().filter(|arg| !arg.hidden) {
             match &arg.kind {
                 Kind::Positional {
                     possible_values, ..
@@ -165,5 +165,27 @@ Does things.
 
   file               input file";
         assert_eq!(help, expected);
+    }
+
+    #[test]
+    fn hidden_args_parse_but_stay_out_of_help() {
+        let parser = Parser::new("prog")
+            .arg(Arg::flag("quiet", "-q").help("be quiet"))
+            .arg(
+                Arg::flag("secret", "--secret")
+                    .values(&["N"])
+                    .hidden(true)
+                    .help("hidden"),
+            );
+
+        let help = parser.render_help();
+        assert!(help.contains("-q"));
+        assert!(!help.contains("--secret"));
+
+        let parsed = parser.parse(["--secret".to_string(), "7".to_string()]);
+        match parsed {
+            Ok(crate::Parsed::Matches(matches)) => assert_eq!(matches.value("secret"), Some("7")),
+            other => panic!("expected matches, got {other:?}"),
+        }
     }
 }
