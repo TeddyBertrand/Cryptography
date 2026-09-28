@@ -75,7 +75,7 @@ Depend on the above:
 
 Depend on those:
 - `crates/pgp` (-> rsa, xor, aes) — `pgp-xor` / `pgp-aes` hybrid modes. #12, #41, #42
-- `crates/sign` (-> rsa, hash) — RSA signatures, `-s` flag (bonus). #59
+- `crates/sign` (-> bigint, rsa, hash) — RSASSA-PKCS1-v1_5 SHA-256 sign/verify, `-s` flag (bonus). #59
 
 Binary:
 - `crates/my_pgp` (-> core, cli, encoding, xor, aes, rsa, pgp, x25519, sign, padding) — calls `cli::parse`, stdin/stdout, dispatch, error -> exit 84. #8, #21, #23
@@ -106,7 +106,8 @@ Dev shell via `flake.nix` — CI runs everything as `nix develop -c <cmd>`.
 
 - Any error → message on stderr, exit `core::EXIT_CODE` (84).
 - Bonus flags (e.g. `rsa --bits N`) stay out of `-h` so help matches the subject byte-for-byte (`tests/cases/help.txt`). Document bonuses in README instead.
-- `sign`, `x25519` are empty stubs; `my_pgp` already depends on them.
+- `x25519` is an empty stub; `my_pgp` already depends on it.
+- `-s` takes an extra hidden `sign_key` positional (signer `d-n` on `-c`, verifier `e-n` on `-d`); signature is appended as the last output line and covers the ciphered output as printed (both lines for `pgp-*`).
 
 ## Enforcement
 
