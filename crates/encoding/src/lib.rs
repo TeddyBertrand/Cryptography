@@ -7,14 +7,21 @@ pub mod hex {
             return Err("hexadecimal data must have an even number of characters".to_string());
         }
 
+        // Byte pairs, not `&str` slices: a multibyte character would split a slice mid-char.
         let mut bytes = Vec::with_capacity(value.len() / 2);
-        for index in (0..value.len()).step_by(2) {
-            let byte = u8::from_str_radix(&value[index..index + 2], 16)
-                .map_err(|_| "invalid hexadecimal data".to_string())?;
-            bytes.push(byte);
+        for [high, low] in value.as_bytes().as_chunks::<2>().0 {
+            bytes.push(digit(*high)? << 4 | digit(*low)?);
         }
 
         Ok(bytes)
+    }
+
+    /// Value of one hexadecimal digit. Unlike `u8::from_str_radix`, rejects a `+` sign.
+    fn digit(byte: u8) -> Result<u8, String> {
+        char::from(byte)
+            .to_digit(16)
+            .map(|digit| digit as u8)
+            .ok_or_else(|| "invalid hexadecimal data".to_string())
     }
 
     pub fn encode(bytes: &[u8]) -> String {
@@ -83,5 +90,7 @@ mod tests {
     fn rejects_invalid_hexadecimal_data() {
         assert!(hex::decode("abc").is_err());
         assert!(hex::decode("zz").is_err());
+        assert!(hex::decode("+1+2").is_err());
+        assert!(hex::decode("aé0").is_err());
     }
 }
