@@ -1,6 +1,6 @@
 use std::{
     io::{self, Read, Write},
-    process,
+    panic, process,
 };
 
 use aes::Aes;
@@ -330,8 +330,19 @@ fn run_command(command: Command) -> Result<()> {
     }
 }
 
+/// Command-line arguments. `std::env::args` would panic on one that isn't UTF-8.
+fn args() -> Result<Vec<String>> {
+    std::env::args_os()
+        .skip(1)
+        .map(|arg| {
+            arg.into_string()
+                .map_err(|_| Error::new("arguments must be valid UTF-8"))
+        })
+        .collect()
+}
+
 fn run() -> Result<()> {
-    match cli::parse(std::env::args().skip(1))? {
+    match cli::parse(args()?)? {
         Outcome::Usage(usage) => {
             println!("{usage}");
             Ok(())
@@ -341,8 +352,14 @@ fn run() -> Result<()> {
 }
 
 fn main() {
-    if let Err(err) = run() {
-        eprintln!("{err}");
-        process::exit(core::EXIT_CODE);
+    match panic::catch_unwind(run) {
+        Ok(Ok(())) => {}
+        Ok(Err(err)) => {
+            eprintln!("{err}");
+            process::exit(core::EXIT_CODE);
+        }
+        // A panic is a bug, already reported on stderr by the panic hook: still exit 84,
+        // as the subject asks for any error, instead of Rust's 101.
+        Err(_) => process::exit(core::EXIT_CODE),
     }
 }
