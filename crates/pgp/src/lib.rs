@@ -24,6 +24,21 @@ pub fn cipher_xor(message: &[u8], key: &str) -> Result<(String, String), String>
     Ok((ciphered_key_hex, encoding::hex::encode(&ciphered_message)))
 }
 
+/// Deciphers a `pgp-xor` message: recovers the symmetric key via RSA, XOR-deciphers the
+/// message (stream mode). `key` is `CIPHERED_SYMMETRIC_KEY:RSA_PRIVATE_KEY`.
+pub fn decipher_xor(ciphertext_hex: &str, key: &str) -> Result<Vec<u8>, String> {
+    let (ciphered_key_hex, rsa_key) = split_key(key)?;
+    let (d, n) = rsa::parse_key(rsa_key)?;
+
+    let symmetric_key = rsa::decipher_hex(ciphered_key_hex, &d, &n)?;
+
+    let xor = Xor::new(Bytes::new(symmetric_key)).map_err(|err| err.to_string())?;
+    let ciphertext = Bytes::new(encoding::hex::decode(ciphertext_hex)?);
+    let plaintext = xor.decipher(&ciphertext).map_err(|err| err.to_string())?;
+
+    Ok(plaintext.into_inner())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -61,5 +76,26 @@ mod tests {
     fn rejects_malformed_key() {
         assert!(cipher_xor(b"hello", "5768").is_err());
         assert!(cipher_xor(b"hello", "5768:not-hex").is_err());
+    }
+
+    // Private half of the same #38 subject example.
+    const RSA_PRIVATE: &str = "9d5b-19bb";
+
+    #[test]
+    fn ciphers_then_deciphers_back_to_original_message() {
+        let message = b"You know nothing, Jon Snow";
+
+        let (ciphered_key_hex, ciphered_message_hex) =
+            cipher_xor(message, &format!("5768:{RSA_PUBLIC}")).unwrap();
+
+        let decipher_key = format!("{ciphered_key_hex}:{RSA_PRIVATE}");
+        let plaintext = decipher_xor(&ciphered_message_hex, &decipher_key).unwrap();
+
+        assert_eq!(plaintext, message);
+    }
+
+    #[test]
+    fn decipher_rejects_malformed_key() {
+        assert!(decipher_xor("aabb", "no-colon").is_err());
     }
 }
