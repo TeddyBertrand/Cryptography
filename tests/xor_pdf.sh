@@ -8,7 +8,5 @@ ciphertext=20070f2700071c6a4449060a490515164e4e12190b190011063c
 
 printf '%s\n' 'You know nothing, Jon Snow' |
     cargo run --quiet --package my_pgp -- xor -c -b "$key"
-printf '\n'
 printf '%s\n' "$ciphertext" |
     cargo run --quiet --package my_pgp -- xor -d -b "$key"
-printf '\n'

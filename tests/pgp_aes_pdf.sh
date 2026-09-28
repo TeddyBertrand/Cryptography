@@ -13,4 +13,3 @@ printf '%s\n' 'All men must die' |
     cargo run --quiet --package my_pgp -- pgp-aes -c -b "$symmetric_key:$public_key"
 printf '%s\n' "$ciphertext" |
     cargo run --quiet --package my_pgp -- pgp-aes -d -b "$ciphered_key:$private_key"
-printf '\n'
