@@ -40,13 +40,21 @@ def reportDiscord() {
             if (line.contains('NEW PB')) records++
             if (line.contains('REGRESSION')) regressions++
         }
-        def description = benchReport ? "```\n${benchReport.trim()}\n```" : 'Benchmarks not run'
         def discord = load 'ci/jenkins/jenkinsfiles/discord.groovy'
-        discord.send(description, [
-            discord.field('Stress tests', stressResult ?: 'not run'),
-            discord.field('New PBs', "${records}"),
-            discord.field('Regressions', "${regressions}")
-        ])
+        def commit = sh(script: 'git log -1 --format="%h %s"', returnStdout: true).trim()
+        def description = 'Benchmarks not run'
+        if (benchReport) {
+            def legend = '▲ new best · ▼ regression · ○ first run · % against the best ever'
+            description = "`${commit}`\n\n${discord.benchTables(benchReport)}${legend}"
+        }
+        discord.send(
+            description: description,
+            fields: [
+                discord.field('Stress tests', stressResult ?: 'not run'),
+                discord.field('New PBs', "${records}"),
+                discord.field('Regressions', regressions > 0 ? "${regressions} ⚠" : '0')
+            ]
+        )
     } catch (err) {
         echo "Discord report not sent: ${err.message}"
     }

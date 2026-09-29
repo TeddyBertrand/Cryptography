@@ -1,5 +1,6 @@
 //! Data-driven functional tests: each `tests/cases/*.txt` file describes one
-//! invocation of the real `my_pgp` binary (args/stdin/stdout/stderr/exit).
+//! invocation of the real `my_pgp` binary (args/stdin/stdout/stderr/exit), and `build.rs` turns
+//! it into its own test, in a module named after its theme (`xor::`, `rsa::`, `cli::`...).
 //! Adding a case needs no Rust change — just drop a new `.txt` file in `tests/cases`.
 //!
 //! An optional `== THEN ==` section holds the arguments of a second invocation fed the first
@@ -8,14 +9,12 @@
 //! checked by their roundtrip.
 //!
 //! An optional `== SKIP ==` section keeps a case from running and says why (e.g. the issue
-//! tracking the missing behavior). Skipped cases are listed on stderr (`--nocapture`).
+//! tracking the missing behavior). Skipped cases are reported on stderr (`--nocapture`).
 
 use std::collections::HashMap;
-use std::ffi::OsStr;
 use std::fs;
 use std::io::Write;
-use std::panic::{self, AssertUnwindSafe};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::{Command, Output, Stdio};
 
 struct Case {
@@ -87,12 +86,13 @@ fn run(args: &[String], stdin: &[u8]) -> Output {
         .stderr(Stdio::piped())
         .spawn()
         .expect("failed to launch my_pgp");
-    child
-        .stdin
-        .take()
-        .expect("piped stdin")
-        .write_all(stdin)
-        .expect("failed to write stdin");
+    // A run that fails on its arguments exits without reading stdin: a closed pipe is fine.
+    match child.stdin.take().expect("piped stdin").write_all(stdin) {
+        Err(err) if err.kind() != std::io::ErrorKind::BrokenPipe => {
+            panic!("failed to write stdin: {err}")
+        }
+        _ => {}
+    }
     child.wait_with_output().expect("failed to wait on my_pgp")
 }
 
@@ -146,44 +146,16 @@ fn check_case(path: &Path) -> Option<String> {
     None
 }
 
-fn case_files() -> Vec<PathBuf> {
-    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/cases");
-    let mut paths: Vec<PathBuf> = fs::read_dir(&dir)
-        .unwrap_or_else(|err| panic!("cannot read {}: {err}", dir.display()))
-        .map(|entry| entry.expect("dir entry").path())
-        .filter(|path| path.extension() == Some(OsStr::new("txt")))
-        .collect();
-    paths.sort();
-    paths
+/// Runs the case named `name` (a `tests/cases/<name>.txt` file), reporting a skipped one on
+/// stderr (`--nocapture`).
+fn run_case(name: &str) {
+    let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("tests/cases")
+        .join(format!("{name}.txt"));
+    if let Some(reason) = check_case(&path) {
+        eprintln!("skipped {name}: {reason}");
+    }
 }
 
-#[test]
-fn functional_cases() {
-    let paths = case_files();
-    assert!(!paths.is_empty(), "no case files found in tests/cases");
-
-    let previous_hook = panic::take_hook();
-    panic::set_hook(Box::new(|_| {}));
-    let mut failures = Vec::new();
-    let mut skipped = Vec::new();
-    for path in &paths {
-        match panic::catch_unwind(AssertUnwindSafe(|| check_case(path))) {
-            Ok(None) => {}
-            Ok(Some(reason)) => skipped.push(format!("{}: {reason}", path.display())),
-            Err(payload) => {
-                let message = payload
-                    .downcast_ref::<String>()
-                    .cloned()
-                    .or_else(|| payload.downcast_ref::<&str>().map(|s| s.to_string()))
-                    .unwrap_or_else(|| "unknown panic".to_string());
-                failures.push(message);
-            }
-        }
-    }
-    panic::set_hook(previous_hook);
-    for skip in &skipped {
-        eprintln!("skipped {skip}");
-    }
-
-    assert!(failures.is_empty(), "\n{}\n", failures.join("\n\n"));
-}
+// One test per case file, in a module per theme: see build.rs.
+include!(concat!(env!("OUT_DIR"), "/cases.rs"));

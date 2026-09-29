@@ -25,20 +25,28 @@ def notifyGitHub(String status, String description) {
 // bare assignment would go through the binding, which Jenkins warns about).
 // They stay null when the build stops before their stage.
 @Field def testSummary = null
+// Tab-separated per-theme results of the Test stage (scripts/test-themes.sh).
+@Field def testThemes = ''
 @Field def lineCoverage = null
 
 // Best-effort like notifyGitHub: see discord.groovy.
 def reportDiscord() {
     try {
         def commit = sh(script: 'git log -1 --format="%h %s"', returnStdout: true).trim()
-        def tests = testSummary == null ? 'not run' :
-            "${testSummary.passCount} passed, ${testSummary.failCount} failed, ${testSummary.skipCount} skipped"
-        def coverage = lineCoverage == null ? 'not run' : "${lineCoverage}% lines"
+        def author = sh(script: 'git log -1 --format=%an', returnStdout: true).trim()
         def discord = load 'ci/jenkins/jenkinsfiles/discord.groovy'
-        discord.send("`${commit}`", [
-            discord.field('Tests', tests),
-            discord.field('Coverage', coverage)
-        ])
+        def tests = 'not run'
+        if (testSummary != null) {
+            def counts = "${testSummary.passCount}/${testSummary.totalCount} passed"
+            def skipped = testSummary.skipCount > 0 ? ", ${testSummary.skipCount} skipped" : ''
+            tests = "${discord.bar(testSummary.passCount, testSummary.totalCount)}\n**${counts}**${skipped}"
+        }
+        def coverage = lineCoverage == null ? 'not run' : "${discord.bar((int) Math.round(lineCoverage as double), 100)}\n**${lineCoverage}%** of lines"
+        def description = "`${commit}` by ${author}\n\n${discord.testTables(discord.parseThemes(testThemes))}"
+        discord.send(
+            description: description,
+            fields: [discord.field('Tests', tests), discord.field('Coverage', coverage)]
+        )
     } catch (err) {
         echo "Discord report not sent: ${err.message}"
     }
@@ -92,6 +100,11 @@ pipeline {
                 always {
                     script {
                         testSummary = junit 'target/nextest/ci/junit.xml'
+                        // Best-effort: no report when the run stopped before writing one.
+                        testThemes = sh(
+                            script: 'sh ci/jenkins/scripts/test-themes.sh target/nextest/ci/junit.xml || true',
+                            returnStdout: true
+                        )
                     }
                 }
             }
