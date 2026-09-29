@@ -1,0 +1,10 @@
+== ARGS ==
+42
+-c
+4142
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+invalid CRYPTO_SYSTEM '42'
+== EXIT ==
+84

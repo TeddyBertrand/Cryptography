@@ -1,0 +1,10 @@
+== ARGS ==
+X25519
+-g
+-s
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+'-s' cannot be used with key generation
+== EXIT ==
+84

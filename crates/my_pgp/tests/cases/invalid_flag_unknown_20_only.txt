@@ -1,0 +1,10 @@
+== ARGS ==
+xor
+--padding
+4142
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+unknown flag '--padding'
+== EXIT ==
+84

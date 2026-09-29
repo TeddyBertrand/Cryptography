@@ -1,0 +1,10 @@
+== ARGS ==
+elgamal
+-c
+4142
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+invalid CRYPTO_SYSTEM 'elgamal'
+== EXIT ==
+84

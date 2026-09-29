@@ -1,0 +1,10 @@
+== ARGS ==
+xor
+--bits2
+4142
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+unknown flag '--bits2'
+== EXIT ==
+84

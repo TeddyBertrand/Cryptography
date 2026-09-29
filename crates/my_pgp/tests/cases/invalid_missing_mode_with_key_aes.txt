@@ -1,0 +1,9 @@
+== ARGS ==
+aes
+57696e74657220697320636f6d696e67
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+missing mode
+== EXIT ==
+84

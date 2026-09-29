@@ -1,0 +1,10 @@
+== ARGS ==
+xor
+--version
+4142
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+unknown flag '--version'
+== EXIT ==
+84

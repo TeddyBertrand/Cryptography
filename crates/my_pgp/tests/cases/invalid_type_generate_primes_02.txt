@@ -1,0 +1,11 @@
+== ARGS ==
+rsa
+-g
+xyz
+xyz
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+hexadecimal data must have an even number of characters
+== EXIT ==
+84

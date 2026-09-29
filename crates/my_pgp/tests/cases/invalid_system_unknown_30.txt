@@ -1,0 +1,10 @@
+== ARGS ==
+dsa
+-c
+4142
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+invalid CRYPTO_SYSTEM 'dsa'
+== EXIT ==
+84

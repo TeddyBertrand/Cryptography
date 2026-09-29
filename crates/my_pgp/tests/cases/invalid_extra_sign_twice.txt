@@ -1,0 +1,13 @@
+== ARGS ==
+xor
+-c
+-s
+-s
+4142
+aa-bb
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+'-s' given more than once
+== EXIT ==
+84

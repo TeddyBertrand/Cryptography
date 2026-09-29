@@ -1,0 +1,10 @@
+== ARGS ==
+xor
+--generate
+4142
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+unknown flag '--generate'
+== EXIT ==
+84

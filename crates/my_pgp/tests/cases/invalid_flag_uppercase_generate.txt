@@ -1,0 +1,11 @@
+== ARGS ==
+rsa
+-G
+03
+05
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+unknown flag '-G'
+== EXIT ==
+84

@@ -1,0 +1,9 @@
+== ARGS ==
+pgp-xor
+-d
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+missing key
+== EXIT ==
+84

@@ -1,0 +1,10 @@
+== ARGS ==
+hex
+-c
+4142
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+invalid CRYPTO_SYSTEM 'hex'
+== EXIT ==
+84

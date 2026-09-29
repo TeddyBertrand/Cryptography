@@ -1,0 +1,10 @@
+== ARGS ==
+xOr
+-c
+4142
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+invalid CRYPTO_SYSTEM 'xOr'
+== EXIT ==
+84

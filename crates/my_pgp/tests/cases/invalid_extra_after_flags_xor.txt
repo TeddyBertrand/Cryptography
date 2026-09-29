@@ -1,0 +1,12 @@
+== ARGS ==
+xor
+-c
+-b
+4142
+4142
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+a signing key requires '-s'
+== EXIT ==
+84

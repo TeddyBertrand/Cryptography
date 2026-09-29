@@ -1,0 +1,10 @@
+== ARGS ==
+xor
+-c
+１２
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+invalid hexadecimal data
+== EXIT ==
+84

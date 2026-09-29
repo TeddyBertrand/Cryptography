@@ -1,0 +1,13 @@
+== ARGS ==
+X25519
+-d
+d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a
+a
+b
+c
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+unexpected argument 'b'
+== EXIT ==
+84

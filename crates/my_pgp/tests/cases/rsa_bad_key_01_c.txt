@@ -6,6 +6,6 @@ rsa
 WF
 == STDOUT ==
 == STDERR ==
-rsa: message is too large for the modulus
+rsa: key must be formatted as exponent-modulus
 == EXIT ==
 84

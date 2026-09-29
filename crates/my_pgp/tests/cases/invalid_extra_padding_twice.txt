@@ -1,0 +1,12 @@
+== ARGS ==
+rsa
+-c
+-p
+-p
+0101-19bb
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+'-p' given more than once
+== EXIT ==
+84

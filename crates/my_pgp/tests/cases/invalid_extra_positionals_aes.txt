@@ -1,0 +1,13 @@
+== ARGS ==
+aes
+-d
+57696e74657220697320636f6d696e67
+a
+b
+c
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+unexpected argument 'b'
+== EXIT ==
+84

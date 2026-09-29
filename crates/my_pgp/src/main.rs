@@ -30,6 +30,9 @@ fn aes_cipher(key: &str) -> Result<Aes> {
 /// Rejects a malformed key before standard input is read, so a bad command line fails
 /// at once instead of waiting for input that may never end.
 fn check_key(command: &Command) -> Result<()> {
+    if let Some(sign_key) = command.sign_key.as_deref() {
+        rsa::parse_key(sign_key).map_err(Error::new)?;
+    }
     match command.system {
         CryptoSystem::Xor => xor_cipher(required_key(command)?).map(drop),
         CryptoSystem::Aes => aes_cipher(required_key(command)?).map(drop),

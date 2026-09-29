@@ -1,0 +1,11 @@
+== ARGS ==
+03
+05
+rsa
+-g
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+invalid CRYPTO_SYSTEM '03'
+== EXIT ==
+84

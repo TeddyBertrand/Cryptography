@@ -1,0 +1,10 @@
+== ARGS ==
+sha256
+-c
+4142
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+invalid CRYPTO_SYSTEM 'sha256'
+== EXIT ==
+84

@@ -1,0 +1,9 @@
+== ARGS ==
+xor
+4142
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+missing mode
+== EXIT ==
+84

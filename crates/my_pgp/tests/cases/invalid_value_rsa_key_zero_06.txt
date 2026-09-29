@@ -1,0 +1,10 @@
+== ARGS ==
+rsa
+-c
+00-01
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+rsa: exponent must be greater than 0
+== EXIT ==
+84

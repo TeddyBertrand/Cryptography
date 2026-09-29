@@ -1,0 +1,10 @@
+== ARGS ==
+pgp-x25519
+-c
+4142
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+invalid CRYPTO_SYSTEM 'pgp-x25519'
+== EXIT ==
+84

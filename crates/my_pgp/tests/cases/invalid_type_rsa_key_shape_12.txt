@@ -1,0 +1,10 @@
+== ARGS ==
+rsa
+-c
+--
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+unknown flag '--'
+== EXIT ==
+84

@@ -18,6 +18,7 @@ fn theme(case: &str) -> &'static str {
         "pgp" => "pgp",
         "x25519" => "x25519",
         "sign" => "sign",
+        "invalid" => "invalid",
         "subject" => "subject",
         _ => "cli",
     }

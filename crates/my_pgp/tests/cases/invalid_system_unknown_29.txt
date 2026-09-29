@@ -1,0 +1,10 @@
+== ARGS ==
+ecdsa
+-c
+4142
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+invalid CRYPTO_SYSTEM 'ecdsa'
+== EXIT ==
+84

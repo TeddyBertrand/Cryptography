@@ -1,0 +1,9 @@
+== ARGS ==
+aes
+-b
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+missing mode
+== EXIT ==
+84

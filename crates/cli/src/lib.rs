@@ -57,7 +57,10 @@ where
 
     let padding = matches.is_present(spec::PADDING);
     if padding {
-        if matches!(system, CryptoSystem::Xor | CryptoSystem::Aes) {
+        if matches!(
+            system,
+            CryptoSystem::Xor | CryptoSystem::Aes | CryptoSystem::X25519
+        ) {
             return Err(Error::new(
                 "'-p' is only available with rsa, pgp-xor and pgp-aes",
             ));
@@ -237,6 +240,12 @@ Cipher or decipher MESSAGE using a given CRYPTO_SYSTEM. The MESSAGE is read from
         );
         assert_eq!(
             run(&["aes", "-d", "-p", "k"]),
+            Err(Error::new(
+                "'-p' is only available with rsa, pgp-xor and pgp-aes"
+            ))
+        );
+        assert_eq!(
+            run(&["X25519", "-c", "-p", "k"]),
             Err(Error::new(
                 "'-p' is only available with rsa, pgp-xor and pgp-aes"
             ))

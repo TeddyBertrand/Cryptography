@@ -1,0 +1,10 @@
+== ARGS ==
+des
+-c
+4142
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+invalid CRYPTO_SYSTEM 'des'
+== EXIT ==
+84
