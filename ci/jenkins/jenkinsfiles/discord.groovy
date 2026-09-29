@@ -104,6 +104,38 @@ def testTables(Map parsed) {
     return text
 }
 
+// Parses the report lines of scripts/bench-records.sh (`name median unit best <flag>`) into one
+// code block per unit. `gain` is the median against the best ever, positive when better:
+// `ms` is lower-is-better, every other unit higher-is-better.
+def benchTables(String report) {
+    def titles = ['MB/s': 'THROUGHPUT (MB/s)', 'ops/s': 'RSA (ops/s)', 'ms': 'PRIME GENERATION (ms)']
+    def rows = [:]
+    for (line in (report ?: '').split('\n')) {
+        def cols = line.trim().split(/\s+/)
+        if (cols.length < 5 || cols[3] != 'best') {
+            continue
+        }
+        double median = cols[1] as double
+        double best = cols[4] as double
+        double gain = best == 0 ? 0 : (median - best) / best * 100
+        if (cols[2] == 'ms') {
+            gain = -gain
+        }
+        def flags = cols.length > 5 ? cols[5..-1].join(' ') : ''
+        def mark = flags.startsWith('NEW PB') ? '▲' : (flags.startsWith('REGRESSION') ? '▼' : (flags == 'first run' ? '○' : '·'))
+        def delta = flags == 'first run' ? 'first run' : (flags.startsWith('NEW PB') ? 'new best' : String.format('%+.1f%%', gain))
+        def row = "${mark} ${cols[0].padRight(16)} ${String.format('%10.1f', median)}  ${delta}\n"
+        rows[cols[2]] = (rows[cols[2]] ?: '') + row
+    }
+    def text = ''
+    for (entry in titles) {
+        if (rows[entry.key]) {
+            text += "**${entry.value}**\n```\n${rows[entry.key]}```\n"
+        }
+    }
+    return text
+}
+
 // Embed timestamps are ISO 8601 UTC.
 def now() {
     return new Date().format("yyyy-MM-dd'T'HH:mm:ss'Z'", TimeZone.getTimeZone('UTC'))

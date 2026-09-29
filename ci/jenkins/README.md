@@ -124,8 +124,10 @@ result (green, yellow for unstable, red) and linking to the build:
   `crates/my_pgp/build.rs`, in a module named after its theme), so Jenkins
   counts and names each case. The themes come from the nextest JUnit report
   through `scripts/test-themes.sh`.
-- `cryptography-nightly`: every benchmark median next to its personal best,
-  `NEW PB` / `REGRESSION -N%` flags, the stress test result and duration.
+- `cryptography-nightly`: the benchmark medians in one table per unit
+  (throughput, RSA, prime generation), each marked `▲` new personal best,
+  `▼` regression, `○` first run, with its gain or loss against the best ever,
+  plus the stress test result, PB and regression counts and duration.
 
 Both Jenkinsfiles `load` the shared `jenkinsfiles/discord.groovy` helper from
 the workspace in `post { always }`. Posting is best-effort: a Discord outage
