@@ -1,0 +1,11 @@
+== ARGS ==
+-c
+4142
+-b
+xor
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+invalid CRYPTO_SYSTEM '4142'
+== EXIT ==
+84

@@ -1,0 +1,10 @@
+== ARGS ==
+xor
+--mode
+4142
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+unknown flag '--mode'
+== EXIT ==
+84

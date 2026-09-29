@@ -1,0 +1,10 @@
+== ARGS ==
+xor
+-B
+4142
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+unknown flag '-B'
+== EXIT ==
+84

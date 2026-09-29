@@ -1,0 +1,11 @@
+== ARGS ==
+rsa
+-c
+-
+== STDIN ==
+WF
+== STDOUT ==
+== STDERR ==
+rsa: key must be formatted as exponent-modulus
+== EXIT ==
+84

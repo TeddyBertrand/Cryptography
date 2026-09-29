@@ -1,0 +1,15 @@
+== ARGS ==
+aes
+-c
+57696e74657220697320636f6d696e67
+== THEN ==
+aes
+-d
+57696e74657220697320636f6d696e67
+== STDIN ==
+Hodor
+== STDOUT ==
+Hodor
+== STDERR ==
+== EXIT ==
+0

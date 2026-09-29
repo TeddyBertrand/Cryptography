@@ -1,0 +1,10 @@
+== ARGS ==
+xor
+-db
+4142
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+unknown flag '-db'
+== EXIT ==
+84

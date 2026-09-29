@@ -1,0 +1,15 @@
+== ARGS ==
+aes
+-c
+ffffffffffffffffffffffffffffffff
+== THEN ==
+aes
+-d
+ffffffffffffffffffffffffffffffff
+== STDIN ==
+Winter is coming
+== STDOUT ==
+Winter is coming
+== STDERR ==
+== EXIT ==
+0

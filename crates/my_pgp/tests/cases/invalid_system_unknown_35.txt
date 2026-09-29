@@ -1,0 +1,10 @@
+== ARGS ==
+base64
+-c
+4142
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+invalid CRYPTO_SYSTEM 'base64'
+== EXIT ==
+84

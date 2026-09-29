@@ -1,0 +1,12 @@
+== ARGS ==
+rsa
+-g
+8b
+f1
+== STDIN ==
+== STDOUT ==
+public key: 0101-db82
+private key: d109-db82
+== STDERR ==
+== EXIT ==
+0

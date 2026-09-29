@@ -1,0 +1,11 @@
+== ARGS ==
+xor
+-c
+-bb
+k
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+unknown flag '-bb'
+== EXIT ==
+84

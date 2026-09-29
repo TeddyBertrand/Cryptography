@@ -1,0 +1,11 @@
+== ARGS ==
+xor
+-d
+30
+== STDIN ==
+58555c5c5f3a
+== STDOUT ==
+hello
+== STDERR ==
+== EXIT ==
+0

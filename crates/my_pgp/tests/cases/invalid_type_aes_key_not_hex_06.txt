@@ -1,0 +1,10 @@
+== ARGS ==
+aes
+-c
+--
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+unknown flag '--'
+== EXIT ==
+84

@@ -1,0 +1,11 @@
+== ARGS ==
+rsa
+-c
+-19bb-0101
+== STDIN ==
+WF
+== STDOUT ==
+== STDERR ==
+unknown flag '-19bb-0101'
+== EXIT ==
+84

@@ -1,0 +1,11 @@
+== ARGS ==
+rsa
+-d
+--nope
+0101-19bb
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+unknown flag '--nope'
+== EXIT ==
+84

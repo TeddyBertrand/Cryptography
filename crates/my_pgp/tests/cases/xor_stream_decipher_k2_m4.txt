@@ -1,0 +1,12 @@
+== ARGS ==
+xor
+-d
+3037
+== STDIN ==
+455a445b3a5e595b5559303d
+== STDOUT ==
+multi
+line
+== STDERR ==
+== EXIT ==
+0

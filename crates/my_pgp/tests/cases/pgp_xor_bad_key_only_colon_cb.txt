@@ -1,0 +1,12 @@
+== ARGS ==
+pgp-xor
+-c
+-b
+:
+== STDIN ==
+Winter is coming
+== STDOUT ==
+== STDERR ==
+rsa: key must be formatted as exponent-modulus
+== EXIT ==
+84

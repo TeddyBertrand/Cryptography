@@ -1,0 +1,10 @@
+== ARGS ==
+3des
+-c
+4142
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+invalid CRYPTO_SYSTEM '3des'
+== EXIT ==
+84

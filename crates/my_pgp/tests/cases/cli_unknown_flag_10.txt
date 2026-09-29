@@ -1,0 +1,11 @@
+== ARGS ==
+xor
+-c
+--block
+k
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+unknown flag '--block'
+== EXIT ==
+84

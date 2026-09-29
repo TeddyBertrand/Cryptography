@@ -1,0 +1,12 @@
+== ARGS ==
+xor
+-c
+--bits
+512
+4142
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+'-c' and '--bits N' are both mode, only one allowed
+== EXIT ==
+84

@@ -1,0 +1,10 @@
+== ARGS ==
+pgp-xor
+-g
+03
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+'-g' requires P and Q with rsa
+== EXIT ==
+84

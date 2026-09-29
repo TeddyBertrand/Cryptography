@@ -1,0 +1,15 @@
+== ARGS ==
+xor
+-c
+4142
+== THEN ==
+xor
+-d
+4142
+== STDIN ==
+You know nothing, Jon Snow
+== STDOUT ==
+You know nothing, Jon Snow
+== STDERR ==
+== EXIT ==
+0

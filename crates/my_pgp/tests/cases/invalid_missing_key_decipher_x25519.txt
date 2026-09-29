@@ -1,0 +1,9 @@
+== ARGS ==
+X25519
+-d
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+missing key
+== EXIT ==
+84

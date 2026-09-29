@@ -1,0 +1,10 @@
+== ARGS ==
+aes
+-c
+
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+AES key must be 128, 192, or 256 bits
+== EXIT ==
+84

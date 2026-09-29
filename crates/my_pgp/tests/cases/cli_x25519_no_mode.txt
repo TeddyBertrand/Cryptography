@@ -1,0 +1,9 @@
+== ARGS ==
+X25519
+k
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+missing mode
+== EXIT ==
+84

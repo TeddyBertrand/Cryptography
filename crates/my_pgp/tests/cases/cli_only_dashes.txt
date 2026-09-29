@@ -1,0 +1,8 @@
+== ARGS ==
+--
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+unknown flag '--'
+== EXIT ==
+84

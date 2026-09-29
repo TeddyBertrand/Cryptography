@@ -1,0 +1,12 @@
+== ARGS ==
+aes
+-c
+-b
+57696e74657220697320636f6d696e67
+57696e74657220697320636f6d696e67
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+a signing key requires '-s'
+== EXIT ==
+84

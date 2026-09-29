@@ -1,0 +1,12 @@
+== ARGS ==
+pgp-xor
+-g
+03
+05
+-s
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+'-g' is only available with rsa
+== EXIT ==
+84

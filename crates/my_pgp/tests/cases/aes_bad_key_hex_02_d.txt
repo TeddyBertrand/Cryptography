@@ -1,0 +1,11 @@
+== ARGS ==
+aes
+-d
+000000000000000000000000000000000
+== STDIN ==
+00
+== STDOUT ==
+== STDERR ==
+hexadecimal data must have an even number of characters
+== EXIT ==
+84

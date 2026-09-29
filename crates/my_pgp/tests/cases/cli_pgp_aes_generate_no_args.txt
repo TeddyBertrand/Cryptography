@@ -1,0 +1,10 @@
+== ARGS ==
+pgp-aes
+-g
+-c
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+'-c' and '-g P Q' are both mode, only one allowed
+== EXIT ==
+84

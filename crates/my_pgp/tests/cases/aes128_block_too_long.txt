@@ -1,0 +1,12 @@
+== ARGS ==
+aes
+-c
+-b
+57696e74657220697320636f6d696e67
+== STDIN ==
+ccccccccccccccccc
+== STDOUT ==
+== STDERR ==
+AES blocks must be 128 bits
+== EXIT ==
+84

@@ -1,0 +1,10 @@
+== ARGS ==
+rot13
+-c
+4142
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+invalid CRYPTO_SYSTEM 'rot13'
+== EXIT ==
+84

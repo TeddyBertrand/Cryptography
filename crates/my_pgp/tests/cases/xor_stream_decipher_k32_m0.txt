@@ -1,0 +1,11 @@
+== ARGS ==
+xor
+-d
+30373e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb0209
+== STDIN ==
+30373e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfec8298976761
+== STDOUT ==
+hello
+== STDERR ==
+== EXIT ==
+0

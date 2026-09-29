@@ -1,0 +1,12 @@
+== ARGS ==
+rsa
+-g
+65
+fb
+== STDIN ==
+== STDOUT ==
+public key: 0101-0763
+private key: 8901-0763
+== STDERR ==
+== EXIT ==
+0

@@ -1,0 +1,13 @@
+== ARGS ==
+rsa
+-g
+--bits
+64
+--bits
+128
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+'--bits' given more than once
+== EXIT ==
+84

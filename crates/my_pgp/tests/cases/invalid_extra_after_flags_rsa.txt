@@ -1,0 +1,12 @@
+== ARGS ==
+rsa
+-c
+-b
+0101-19bb
+0101-19bb
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+a signing key requires '-s'
+== EXIT ==
+84

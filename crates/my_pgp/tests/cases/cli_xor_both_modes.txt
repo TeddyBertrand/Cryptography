@@ -1,0 +1,11 @@
+== ARGS ==
+xor
+-c
+-d
+k
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+'-c' and '-d' are both mode, only one allowed
+== EXIT ==
+84

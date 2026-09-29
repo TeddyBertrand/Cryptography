@@ -1,0 +1,10 @@
+== ARGS ==
+xor
+--help2
+4142
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+unknown flag '--help2'
+== EXIT ==
+84

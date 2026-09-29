@@ -1,0 +1,10 @@
+== ARGS ==
+X25519
+-c
+ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+X25519 keys must be 32 bytes
+== EXIT ==
+84

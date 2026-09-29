@@ -1,0 +1,10 @@
+== ARGS ==
+X25519
+-c
+zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+invalid hexadecimal data
+== EXIT ==
+84

@@ -1,0 +1,10 @@
+== ARGS ==
+日本
+-c
+4142
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+invalid CRYPTO_SYSTEM '日本'
+== EXIT ==
+84

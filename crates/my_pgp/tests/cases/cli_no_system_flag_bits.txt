@@ -1,0 +1,8 @@
+== ARGS ==
+--bits
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+missing value N for '--bits'
+== EXIT ==
+84

@@ -1,0 +1,11 @@
+== ARGS ==
+rsa
+-c
+0101-556a
+== STDIN ==
+A
+== STDOUT ==
+272b
+== STDERR ==
+== EXIT ==
+0

@@ -1,0 +1,12 @@
+== ARGS ==
+rsa
+-g
+03
+05
+-p
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+'-p' cannot be used with key generation
+== EXIT ==
+84

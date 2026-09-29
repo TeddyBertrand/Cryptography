@@ -1,0 +1,10 @@
+== ARGS ==
+pgp-xor
+-c
+4142:zz-19bb
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+invalid hexadecimal data
+== EXIT ==
+84

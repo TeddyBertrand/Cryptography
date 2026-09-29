@@ -1,0 +1,11 @@
+== ARGS ==
+xor
+-d
+30373e454c535a61
+== STDIN ==
+59174c20383d33365759572823307a1230373e454c535a6b
+== STDOUT ==
+Winter is coming
+== STDERR ==
+== EXIT ==
+0

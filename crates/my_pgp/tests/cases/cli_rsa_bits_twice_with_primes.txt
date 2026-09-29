@@ -1,0 +1,13 @@
+== ARGS ==
+rsa
+-g
+03
+05
+--bits
+64
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+'-g P Q' and '--bits N' are both mode, only one allowed
+== EXIT ==
+84

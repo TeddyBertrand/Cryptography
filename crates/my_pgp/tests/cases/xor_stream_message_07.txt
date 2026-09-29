@@ -1,0 +1,15 @@
+== ARGS ==
+xor
+-c
+4142
+== THEN ==
+xor
+-d
+4142
+== STDIN ==
+Valar morghulis
+== STDOUT ==
+Valar morghulis
+== STDERR ==
+== EXIT ==
+0

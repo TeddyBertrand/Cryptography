@@ -1,0 +1,12 @@
+== ARGS ==
+aes
+-d
+-b
+57696e74657220697320636f6d696e670102030405060708
+== STDIN ==
+62b3da1ce1a20093ed27e8838f06ba3a
+== STDOUT ==
+bbbbbbbbbbbbbbbb
+== STDERR ==
+== EXIT ==
+0

@@ -1,0 +1,8 @@
+== ARGS ==
+blowfish
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+invalid CRYPTO_SYSTEM 'blowfish'
+== EXIT ==
+84

@@ -1,0 +1,11 @@
+== ARGS ==
+aes
+-c
+00
+aa-bb
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+a signing key requires '-s'
+== EXIT ==
+84
