@@ -1,0 +1,12 @@
+== ARGS ==
+rsa
+-g
+8b
+c1
+== STDIN ==
+== STDOUT ==
+public key: 0101-cb68
+private key: 8105-cb68
+== STDERR ==
+== EXIT ==
+0

@@ -1,0 +1,12 @@
+== ARGS ==
+rsa
+-g
+0d
+bf
+== STDIN ==
+== STDOUT ==
+public key: 0101-b309
+private key: ad-b309
+== STDERR ==
+== EXIT ==
+0

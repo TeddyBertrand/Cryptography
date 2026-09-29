@@ -1,0 +1,12 @@
+== ARGS ==
+xor
+-d
+-b
+4142
+== STDIN ==
+2323
+== STDOUT ==
+ab
+== STDERR ==
+== EXIT ==
+0

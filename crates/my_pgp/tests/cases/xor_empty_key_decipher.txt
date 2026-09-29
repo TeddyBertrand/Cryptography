@@ -1,0 +1,11 @@
+== ARGS ==
+xor
+-d
+
+== STDIN ==
+00
+== STDOUT ==
+== STDERR ==
+XOR key cannot be empty
+== EXIT ==
+84

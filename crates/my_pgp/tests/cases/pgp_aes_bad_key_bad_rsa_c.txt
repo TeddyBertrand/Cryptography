@@ -1,0 +1,11 @@
+== ARGS ==
+pgp-aes
+-c
+4142:0101-zz
+== STDIN ==
+Winter is coming
+== STDOUT ==
+== STDERR ==
+invalid hexadecimal data
+== EXIT ==
+84

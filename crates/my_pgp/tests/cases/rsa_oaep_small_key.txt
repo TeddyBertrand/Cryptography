@@ -1,0 +1,12 @@
+== ARGS ==
+rsa
+-c
+-p
+0101-19bb
+== STDIN ==
+A
+== STDOUT ==
+== STDERR ==
+padding: modulus too small for OAEP
+== EXIT ==
+84

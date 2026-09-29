@@ -1,0 +1,12 @@
+== ARGS ==
+pgp-aes
+-d
+4142:0101-zz
+== STDIN ==
+aa
+bb
+== STDOUT ==
+== STDERR ==
+invalid hexadecimal data
+== EXIT ==
+84

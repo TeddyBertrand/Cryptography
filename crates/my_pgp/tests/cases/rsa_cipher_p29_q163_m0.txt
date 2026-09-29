@@ -1,0 +1,11 @@
+== ARGS ==
+rsa
+-c
+0101-7712
+== STDIN ==
+A
+== STDOUT ==
+dc06
+== STDERR ==
+== EXIT ==
+0

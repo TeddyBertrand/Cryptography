@@ -1,0 +1,19 @@
+== ARGS ==
+aes
+-c
+57696e74657220697320636f6d696e670102030405060708
+== THEN ==
+aes
+-d
+57696e74657220697320636f6d696e670102030405060708
+== STDIN ==
+multi
+line
+text
+== STDOUT ==
+multi
+line
+text
+== STDERR ==
+== EXIT ==
+0

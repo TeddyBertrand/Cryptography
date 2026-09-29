@@ -1,0 +1,11 @@
+== ARGS ==
+rsa
+-d
+a106-f30e
+== STDIN ==
+120b
+== STDOUT ==
+A
+== STDERR ==
+== EXIT ==
+0

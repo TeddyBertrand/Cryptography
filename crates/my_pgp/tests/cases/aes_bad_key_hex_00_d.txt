@@ -1,0 +1,11 @@
+== ARGS ==
+aes
+-d
+zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz
+== STDIN ==
+00
+== STDOUT ==
+== STDERR ==
+invalid hexadecimal data
+== EXIT ==
+84

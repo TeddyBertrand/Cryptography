@@ -1,0 +1,15 @@
+== ARGS ==
+xor
+-c
+4142
+== THEN ==
+xor
+-d
+4142
+== STDIN ==
+The night is dark and full of terrors
+== STDOUT ==
+The night is dark and full of terrors
+== STDERR ==
+== EXIT ==
+0

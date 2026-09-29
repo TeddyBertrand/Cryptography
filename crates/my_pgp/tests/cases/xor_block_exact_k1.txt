@@ -1,0 +1,12 @@
+== ARGS ==
+xor
+-c
+-b
+41
+== STDIN ==
+a
+== STDOUT ==
+20
+== STDERR ==
+== EXIT ==
+0

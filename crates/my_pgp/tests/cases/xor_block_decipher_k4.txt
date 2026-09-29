@@ -1,0 +1,12 @@
+== ARGS ==
+xor
+-d
+-b
+41424344
+== STDIN ==
+25212125
+== STDOUT ==
+abcd
+== STDERR ==
+== EXIT ==
+0

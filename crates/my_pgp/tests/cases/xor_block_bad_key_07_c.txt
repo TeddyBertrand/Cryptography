@@ -1,0 +1,12 @@
+== ARGS ==
+xor
+-c
+-b
+gg
+== STDIN ==
+Winter is coming
+== STDOUT ==
+== STDERR ==
+invalid hexadecimal data
+== EXIT ==
+84

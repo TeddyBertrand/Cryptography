@@ -1,0 +1,12 @@
+== ARGS ==
+pgp-aes
+-c
+-p
+57696e74657220697320636f6d696e67:0101-19bb
+== STDIN ==
+a
+== STDOUT ==
+== STDERR ==
+padding: modulus too small for OAEP
+== EXIT ==
+84

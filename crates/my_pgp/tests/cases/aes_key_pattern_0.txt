@@ -1,0 +1,15 @@
+== ARGS ==
+aes
+-c
+00000000000000000000000000000000
+== THEN ==
+aes
+-d
+00000000000000000000000000000000
+== STDIN ==
+Winter is coming
+== STDOUT ==
+Winter is coming
+== STDERR ==
+== EXIT ==
+0

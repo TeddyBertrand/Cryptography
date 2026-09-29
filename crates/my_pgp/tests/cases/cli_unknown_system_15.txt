@@ -1,0 +1,10 @@
+== ARGS ==
+xor-
+-c
+k
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+invalid CRYPTO_SYSTEM 'xor-'
+== EXIT ==
+84

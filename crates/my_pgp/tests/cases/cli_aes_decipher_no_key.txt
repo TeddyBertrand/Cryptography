@@ -1,0 +1,9 @@
+== ARGS ==
+aes
+-d
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+missing key
+== EXIT ==
+84

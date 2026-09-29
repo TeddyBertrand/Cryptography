@@ -1,0 +1,11 @@
+== ARGS ==
+aes
+-c
+0102030405060708090a0b0c0d0e0f101112131415161718191a
+== STDIN ==
+Winter is coming
+== STDOUT ==
+== STDERR ==
+AES key must be 128, 192, or 256 bits
+== EXIT ==
+84

@@ -1,0 +1,10 @@
+== ARGS ==
+pgp
+-c
+k
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+invalid CRYPTO_SYSTEM 'pgp'
+== EXIT ==
+84

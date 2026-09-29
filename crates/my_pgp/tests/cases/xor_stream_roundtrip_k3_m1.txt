@@ -1,0 +1,15 @@
+== ARGS ==
+xor
+-c
+30373e
+== THEN ==
+xor
+-d
+30373e
+== STDIN ==
+Winter is coming
+== STDOUT ==
+Winter is coming
+== STDERR ==
+== EXIT ==
+0

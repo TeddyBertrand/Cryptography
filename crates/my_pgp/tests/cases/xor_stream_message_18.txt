@@ -1,0 +1,15 @@
+== ARGS ==
+xor
+-c
+4142
+== THEN ==
+xor
+-d
+4142
+== STDIN ==
+tab	here
+== STDOUT ==
+tab	here
+== STDERR ==
+== EXIT ==
+0

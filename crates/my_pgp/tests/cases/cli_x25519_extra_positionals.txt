@@ -1,0 +1,12 @@
+== ARGS ==
+X25519
+-d
+k
+extra
+more
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+unexpected argument 'more'
+== EXIT ==
+84

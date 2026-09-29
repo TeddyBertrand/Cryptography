@@ -1,0 +1,11 @@
+== ARGS ==
+rsa
+-d
+-c
+k
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+'-c' and '-d' are both mode, only one allowed
+== EXIT ==
+84

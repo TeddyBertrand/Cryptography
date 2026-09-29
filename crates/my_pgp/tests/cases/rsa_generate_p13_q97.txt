@@ -1,0 +1,12 @@
+== ARGS ==
+rsa
+-g
+0d
+61
+== STDIN ==
+== STDOUT ==
+public key: 11-ed04
+private key: 11-ed04
+== STDERR ==
+== EXIT ==
+0
