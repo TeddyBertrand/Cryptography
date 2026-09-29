@@ -1,0 +1,11 @@
+== ARGS ==
+xor
+-c
+-日
+4142
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+unknown flag '-日'
+== EXIT ==
+84

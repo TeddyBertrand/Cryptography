@@ -1,0 +1,13 @@
+== ARGS ==
+xor
+-c
+-s
+4142
+aa-bb
+cc-dd
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+unexpected argument 'cc-dd'
+== EXIT ==
+84

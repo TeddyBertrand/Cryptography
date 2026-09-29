@@ -1,0 +1,10 @@
+== ARGS ==
+-pgp
+-c
+4142
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+unknown flag '-pgp'
+== EXIT ==
+84

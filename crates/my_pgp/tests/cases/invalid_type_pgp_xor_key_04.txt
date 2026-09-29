@@ -1,0 +1,10 @@
+== ARGS ==
+pgp-xor
+-c
+4142;0101-19bb
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+pgp: key must be formatted as SYMMETRIC_KEY:RSA_KEY
+== EXIT ==
+84

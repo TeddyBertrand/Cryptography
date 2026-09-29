@@ -1,0 +1,10 @@
+== ARGS ==
+xor
+-c
+ff-ff
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+hexadecimal data must have an even number of characters
+== EXIT ==
+84

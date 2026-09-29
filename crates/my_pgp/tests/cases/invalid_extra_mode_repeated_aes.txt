@@ -1,0 +1,11 @@
+== ARGS ==
+aes
+-c
+-c
+57696e74657220697320636f6d696e67
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+'-c' given more than once
+== EXIT ==
+84

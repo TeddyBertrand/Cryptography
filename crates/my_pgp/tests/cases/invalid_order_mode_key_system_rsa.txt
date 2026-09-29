@@ -1,0 +1,10 @@
+== ARGS ==
+-c
+0101-19bb
+rsa
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+invalid CRYPTO_SYSTEM '0101-19bb'
+== EXIT ==
+84

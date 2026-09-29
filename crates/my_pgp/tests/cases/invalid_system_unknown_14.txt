@@ -1,0 +1,10 @@
+== ARGS ==
+pgp-Aes
+-c
+4142
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+invalid CRYPTO_SYSTEM 'pgp-Aes'
+== EXIT ==
+84

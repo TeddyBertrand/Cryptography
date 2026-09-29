@@ -1,0 +1,10 @@
+== ARGS ==
+X25519
+-g
+4142
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+'-g' requires P and Q with rsa
+== EXIT ==
+84

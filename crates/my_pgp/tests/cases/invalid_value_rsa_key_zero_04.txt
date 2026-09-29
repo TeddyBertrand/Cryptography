@@ -1,0 +1,10 @@
+== ARGS ==
+rsa
+-c
+0101-00
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+rsa: modulus must be greater than 1
+== EXIT ==
+84

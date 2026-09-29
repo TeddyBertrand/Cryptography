@@ -1,0 +1,10 @@
+== ARGS ==
+X25519
+-c
+00000000000000000000000000000000000000000000000000000000000000000
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+hexadecimal data must have an even number of characters
+== EXIT ==
+84

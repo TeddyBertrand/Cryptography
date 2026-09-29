@@ -1,0 +1,13 @@
+== ARGS ==
+xor
+-d
+4142
+a
+b
+c
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+unexpected argument 'b'
+== EXIT ==
+84

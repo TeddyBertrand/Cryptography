@@ -1,0 +1,8 @@
+== ARGS ==
+pgp-aes
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+missing mode
+== EXIT ==
+84

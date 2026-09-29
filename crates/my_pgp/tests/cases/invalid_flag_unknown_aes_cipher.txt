@@ -1,0 +1,11 @@
+== ARGS ==
+aes
+-c
+-q
+57696e74657220697320636f6d696e67
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+unknown flag '-q'
+== EXIT ==
+84

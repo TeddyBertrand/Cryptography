@@ -1,0 +1,11 @@
+== ARGS ==
+rsa
+-g
+03
+01
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+rsa: p and q must be greater than 1
+== EXIT ==
+84

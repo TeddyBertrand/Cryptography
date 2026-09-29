@@ -1,0 +1,11 @@
+== ARGS ==
+xor
+-c
+--bits=64
+4142
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+unknown flag '--bits=64'
+== EXIT ==
+84

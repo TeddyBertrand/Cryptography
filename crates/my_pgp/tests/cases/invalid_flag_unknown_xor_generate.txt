@@ -1,0 +1,12 @@
+== ARGS ==
+xor
+-g
+03
+05
+--nope
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+unknown flag '--nope'
+== EXIT ==
+84

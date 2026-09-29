@@ -1,0 +1,10 @@
+== ARGS ==
+pgp-rsa
+-c
+4142
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+invalid CRYPTO_SYSTEM 'pgp-rsa'
+== EXIT ==
+84

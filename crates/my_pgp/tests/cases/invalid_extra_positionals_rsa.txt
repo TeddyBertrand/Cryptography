@@ -1,0 +1,13 @@
+== ARGS ==
+rsa
+-d
+0101-19bb
+a
+b
+c
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+unexpected argument 'b'
+== EXIT ==
+84

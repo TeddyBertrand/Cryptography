@@ -1,0 +1,10 @@
+== ARGS ==
+chacha
+-c
+4142
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+invalid CRYPTO_SYSTEM 'chacha'
+== EXIT ==
+84

@@ -1,0 +1,9 @@
+== ARGS ==
+-g
+X25519
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+missing required CRYPTO_SYSTEM
+== EXIT ==
+84

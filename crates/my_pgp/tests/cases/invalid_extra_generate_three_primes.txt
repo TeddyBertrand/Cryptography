@@ -1,0 +1,12 @@
+== ARGS ==
+rsa
+-g
+03
+05
+07
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+'key' cannot be used with '-g P Q'
+== EXIT ==
+84
