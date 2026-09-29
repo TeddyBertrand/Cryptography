@@ -16,13 +16,13 @@ fn required_key(command: &Command) -> Result<&str> {
         .ok_or_else(|| Error::new("missing key"))
 }
 
-fn xor_cipher(command: &Command) -> Result<Xor> {
-    let key = hex::decode(required_key(command)?).map_err(Error::new)?;
+fn xor_cipher(key: &str) -> Result<Xor> {
+    let key = hex::decode(key).map_err(Error::new)?;
     Xor::new(Bytes::new(key))
 }
 
-fn aes_cipher(command: &Command) -> Result<Aes> {
-    let mut key = hex::decode(required_key(command)?).map_err(Error::new)?;
+fn aes_cipher(key: &str) -> Result<Aes> {
+    let mut key = hex::decode(key).map_err(Error::new)?;
     aes::reverse_words(&mut key);
     Aes::get_aes_key(Bytes::new(key))
 }
@@ -31,21 +31,28 @@ fn aes_cipher(command: &Command) -> Result<Aes> {
 /// at once instead of waiting for input that may never end.
 fn check_key(command: &Command) -> Result<()> {
     match command.system {
-        CryptoSystem::Xor => xor_cipher(command).map(drop),
-        CryptoSystem::Aes => aes_cipher(command).map(drop),
+        CryptoSystem::Xor => xor_cipher(required_key(command)?).map(drop),
+        CryptoSystem::Aes => aes_cipher(required_key(command)?).map(drop),
         CryptoSystem::Rsa => rsa::parse_key(required_key(command)?)
             .map(drop)
             .map_err(Error::new),
         CryptoSystem::PgpXor | CryptoSystem::PgpAes => {
-            let (_, rsa_key) = pgp::split_key(required_key(command)?).map_err(Error::new)?;
-            rsa::parse_key(rsa_key).map(drop).map_err(Error::new)
+            let (symmetric_key, rsa_key) =
+                pgp::split_key(required_key(command)?).map_err(Error::new)?;
+            rsa::parse_key(rsa_key).map_err(Error::new)?;
+            // Deciphering gets the RSA-ciphered key here, which may be any hexadecimal size.
+            match (&command.mode, &command.system) {
+                (Mode::Cipher, CryptoSystem::PgpXor) => xor_cipher(symmetric_key).map(drop),
+                (Mode::Cipher, _) => aes_cipher(symmetric_key).map(drop),
+                _ => hex::decode(symmetric_key).map(drop).map_err(Error::new),
+            }
         }
-        CryptoSystem::X25519 => required_key(command).map(drop),
+        CryptoSystem::X25519 => x25519::check_key(required_key(command)?).map_err(Error::new),
     }
 }
 
 fn run_xor(command: &Command, mut message: Vec<u8>) -> Result<Vec<u8>> {
-    let cipher = xor_cipher(command)?;
+    let cipher = xor_cipher(required_key(command)?)?;
     if command.block {
         strip_trailing_lf(&mut message);
     }
@@ -77,7 +84,7 @@ fn run_xor(command: &Command, mut message: Vec<u8>) -> Result<Vec<u8>> {
 }
 
 fn run_aes(command: &Command, mut message: Vec<u8>) -> Result<Vec<u8>> {
-    let cipher = aes_cipher(command)?;
+    let cipher = aes_cipher(required_key(command)?)?;
     if command.block {
         strip_trailing_lf(&mut message);
     }
