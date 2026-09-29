@@ -9,12 +9,50 @@ use core::{Bytes, Cipher, Error, Result};
 use encoding::hex;
 use xor::Xor;
 
-fn run_xor(command: &Command, mut message: Vec<u8>) -> Result<Vec<u8>> {
-    let key = command
+fn required_key(command: &Command) -> Result<&str> {
+    command
         .key
         .as_deref()
-        .ok_or_else(|| Error::new("missing key"))?;
-    let cipher = Xor::new(Bytes::new(hex::decode(key).map_err(Error::new)?))?;
+        .ok_or_else(|| Error::new("missing key"))
+}
+
+fn xor_cipher(key: &str) -> Result<Xor> {
+    let key = hex::decode(key).map_err(Error::new)?;
+    Xor::new(Bytes::new(key))
+}
+
+fn aes_cipher(key: &str) -> Result<Aes> {
+    let mut key = hex::decode(key).map_err(Error::new)?;
+    aes::reverse_words(&mut key);
+    Aes::get_aes_key(Bytes::new(key))
+}
+
+/// Rejects a malformed key before standard input is read, so a bad command line fails
+/// at once instead of waiting for input that may never end.
+fn check_key(command: &Command) -> Result<()> {
+    match command.system {
+        CryptoSystem::Xor => xor_cipher(required_key(command)?).map(drop),
+        CryptoSystem::Aes => aes_cipher(required_key(command)?).map(drop),
+        CryptoSystem::Rsa => rsa::parse_key(required_key(command)?)
+            .map(drop)
+            .map_err(Error::new),
+        CryptoSystem::PgpXor | CryptoSystem::PgpAes => {
+            let (symmetric_key, rsa_key) =
+                pgp::split_key(required_key(command)?).map_err(Error::new)?;
+            rsa::parse_key(rsa_key).map_err(Error::new)?;
+            // Deciphering gets the RSA-ciphered key here, which may be any hexadecimal size.
+            match (&command.mode, &command.system) {
+                (Mode::Cipher, CryptoSystem::PgpXor) => xor_cipher(symmetric_key).map(drop),
+                (Mode::Cipher, _) => aes_cipher(symmetric_key).map(drop),
+                _ => hex::decode(symmetric_key).map(drop).map_err(Error::new),
+            }
+        }
+        CryptoSystem::X25519 => x25519::check_key(required_key(command)?).map_err(Error::new),
+    }
+}
+
+fn run_xor(command: &Command, mut message: Vec<u8>) -> Result<Vec<u8>> {
+    let cipher = xor_cipher(required_key(command)?)?;
     if command.block {
         strip_trailing_lf(&mut message);
     }
@@ -46,13 +84,7 @@ fn run_xor(command: &Command, mut message: Vec<u8>) -> Result<Vec<u8>> {
 }
 
 fn run_aes(command: &Command, mut message: Vec<u8>) -> Result<Vec<u8>> {
-    let key = command
-        .key
-        .as_deref()
-        .ok_or_else(|| Error::new("missing key"))?;
-    let mut key = hex::decode(key).map_err(Error::new)?;
-    aes::reverse_words(&mut key);
-    let cipher = Aes::get_aes_key(Bytes::new(key))?;
+    let cipher = aes_cipher(required_key(command)?)?;
     if command.block {
         strip_trailing_lf(&mut message);
     }
@@ -307,6 +339,7 @@ fn run_command(command: Command) -> Result<()> {
             print_rsa_keys(&rsa::generate_random(*bits).map_err(Error::new)?)
         }
         Mode::Cipher | Mode::Decipher => {
+            check_key(&command)?;
             let message = read_message()?;
             let output = match (&command.mode, command.sign_key.as_deref()) {
                 (Mode::Cipher, Some(key)) => sign_output(run_system(&command, message)?, key)?,
