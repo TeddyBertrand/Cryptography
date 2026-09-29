@@ -6,6 +6,6 @@ rsa
 WF
 == STDOUT ==
 == STDERR ==
-invalid hexadecimal data
+rsa: key must be formatted as exponent-modulus
 == EXIT ==
 84

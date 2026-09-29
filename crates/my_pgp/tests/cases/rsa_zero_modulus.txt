@@ -6,6 +6,6 @@ rsa
 WF
 == STDOUT ==
 == STDERR ==
-rsa: message is too large for the modulus
+rsa: modulus must be greater than 1
 == EXIT ==
 84

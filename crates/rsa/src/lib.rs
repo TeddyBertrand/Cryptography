@@ -6,8 +6,19 @@ pub fn parse_key(key: &str) -> Result<(BigUint, BigUint), String> {
         .split_once('-')
         .ok_or_else(|| "rsa: key must be formatted as exponent-modulus".to_string())?;
 
+    if exponent.is_empty() || modulus.is_empty() {
+        return Err("rsa: key must be formatted as exponent-modulus".to_string());
+    }
     let exponent = BigUint::from_hex(exponent)?;
     let modulus = BigUint::from_hex(modulus)?;
+    if exponent.is_zero() {
+        return Err("rsa: exponent must be greater than 0".to_string());
+    }
+    if modulus.to_bytes().iter().skip(1).all(|&byte| byte == 0)
+        && modulus.to_bytes().first().is_none_or(|&byte| byte <= 1)
+    {
+        return Err("rsa: modulus must be greater than 1".to_string());
+    }
 
     Ok((exponent, modulus))
 }
