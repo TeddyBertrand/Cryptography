@@ -77,6 +77,11 @@ pub fn decipher(ciphertext: &[u8], recipient_private_key: &str) -> Result<Vec<u8
     )
 }
 
+/// Checks that `key` is a well-formed 32-byte hexadecimal key, before any input is read.
+pub fn check_key(key: &str) -> Result<(), String> {
+    parse_key(key).map(drop)
+}
+
 fn parse_key(key: &str) -> Result<[u8; 32], String> {
     encoding::hex::decode(key)?
         .try_into()
