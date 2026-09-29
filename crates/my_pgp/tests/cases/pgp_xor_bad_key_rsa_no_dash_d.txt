@@ -1,0 +1,12 @@
+== ARGS ==
+pgp-xor
+-d
+4142:0101
+== STDIN ==
+aa
+bb
+== STDOUT ==
+== STDERR ==
+rsa: key must be formatted as exponent-modulus
+== EXIT ==
+84

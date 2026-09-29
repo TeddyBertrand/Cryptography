@@ -1,0 +1,11 @@
+== ARGS ==
+pgp-xor
+-c
+57696e74657220697320636f6d696e67
+== STDIN ==
+Winter is coming
+== STDOUT ==
+== STDERR ==
+pgp: key must be formatted as SYMMETRIC_KEY:RSA_KEY
+== EXIT ==
+84
