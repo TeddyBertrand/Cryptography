@@ -6,6 +6,6 @@ k
 == STDIN ==
 == STDOUT ==
 == STDERR ==
-hexadecimal data must have an even number of characters
+'-p' is only available with rsa, pgp-xor and pgp-aes
 == EXIT ==
 84
