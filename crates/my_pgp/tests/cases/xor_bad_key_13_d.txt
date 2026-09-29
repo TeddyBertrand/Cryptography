@@ -1,0 +1,11 @@
+== ARGS ==
+xor
+-d
+00	
+== STDIN ==
+Winter is coming
+== STDOUT ==
+== STDERR ==
+hexadecimal data must have an even number of characters
+== EXIT ==
+84

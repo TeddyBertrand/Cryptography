@@ -1,0 +1,17 @@
+== ARGS ==
+xor
+-c
+30
+== THEN ==
+xor
+-d
+30
+== STDIN ==
+multi
+line
+== STDOUT ==
+multi
+line
+== STDERR ==
+== EXIT ==
+0

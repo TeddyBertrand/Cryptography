@@ -1,0 +1,11 @@
+== ARGS ==
+xor
+-d
+-0
+== STDIN ==
+Winter is coming
+== STDOUT ==
+== STDERR ==
+unknown flag '-0'
+== EXIT ==
+84

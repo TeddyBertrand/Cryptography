@@ -1,0 +1,12 @@
+== ARGS ==
+xor
+-d
+-b
+4142
+== STDIN ==
+41
+== STDOUT ==
+== STDERR ==
+XOR block message and key must have the same size
+== EXIT ==
+84

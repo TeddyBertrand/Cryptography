@@ -1,0 +1,11 @@
+== ARGS ==
+xor
+-d
+30373e
+== STDIN ==
+494e47494e47303d47
+== STDOUT ==
+yyyyyyy
+== STDERR ==
+== EXIT ==
+0
