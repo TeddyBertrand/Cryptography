@@ -1,0 +1,9 @@
+== ARGS ==
+rsa
+-d
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+missing key
+== EXIT ==
+84

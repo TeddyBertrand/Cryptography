@@ -1,0 +1,10 @@
+== ARGS ==
+rsa
+-b
+k
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+missing mode
+== EXIT ==
+84

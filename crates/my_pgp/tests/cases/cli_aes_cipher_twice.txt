@@ -1,0 +1,11 @@
+== ARGS ==
+aes
+-c
+-c
+k
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+'-c' given more than once
+== EXIT ==
+84

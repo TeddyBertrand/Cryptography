@@ -1,0 +1,11 @@
+== ARGS ==
+xor
+-c
+--cipher
+k
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+unknown flag '--cipher'
+== EXIT ==
+84

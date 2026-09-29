@@ -1,0 +1,11 @@
+== ARGS ==
+xor
+-c
+--decipher
+k
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+unknown flag '--decipher'
+== EXIT ==
+84
