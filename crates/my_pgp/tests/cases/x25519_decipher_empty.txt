@@ -1,0 +1,10 @@
+== ARGS ==
+X25519
+-d
+9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60
+== STDIN ==
+== STDOUT ==
+== STDERR ==
+X25519 ciphertext is too short
+== EXIT ==
+84
