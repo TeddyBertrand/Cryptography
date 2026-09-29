@@ -1,0 +1,12 @@
+== ARGS ==
+rsa
+-g
+c7
+d3
+== STDIN ==
+== STDOUT ==
+public key: 0101-05a4
+private key: 1115-05a4
+== STDERR ==
+== EXIT ==
+0

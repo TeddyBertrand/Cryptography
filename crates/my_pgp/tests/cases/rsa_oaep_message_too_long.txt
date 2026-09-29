@@ -1,0 +1,12 @@
+== ARGS ==
+rsa
+-c
+-p
+010001-aba1499cb9f43492c302b23692cba8c8e0dc89417bf7e72c888d90f40ae442d0d11a1c6f518d5eeeeab829a75f45cf6d56794744dd3be1a287699649fcd01ab1c2a395aa6e32a3f26817611b42ebefb3dd59934d0c20611a7303a37184d185beb7239af5e180c3eed45beaf0f51052b5e65624878b311c5c44b2213a2ecacac0
+== STDIN ==
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+== STDOUT ==
+== STDERR ==
+padding: message too long for OAEP
+== EXIT ==
+84

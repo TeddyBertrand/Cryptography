@@ -1,0 +1,12 @@
+== ARGS ==
+rsa
+-g
+8b
+95
+== STDIN ==
+== STDOUT ==
+public key: 0101-e750
+private key: 9d22-e750
+== STDERR ==
+== EXIT ==
+0

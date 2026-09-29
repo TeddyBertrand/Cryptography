@@ -1,0 +1,12 @@
+== ARGS ==
+rsa
+-g
+4f
+e5
+== STDIN ==
+== STDOUT ==
+public key: 0101-ab46
+private key: ad-ab46
+== STDERR ==
+== EXIT ==
+0

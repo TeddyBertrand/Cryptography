@@ -1,0 +1,11 @@
+== ARGS ==
+rsa
+-d
+11-ed04
+== STDIN ==
+1602
+== STDOUT ==
+B
+== STDERR ==
+== EXIT ==
+0
