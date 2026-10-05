@@ -4,6 +4,9 @@ The subject says that "a proper understanding of every cryptosystem implemented 
 and asks why the extra protections matter. For each system `my_pgp` implements, these notes
 explain how it works and why it is secure or not, with the code that implements it.
 
+For the theory and a code walkthrough of each technique, with its optimisations, see the
+[project guide](guide/README.md).
+
 Every example below was run on the real binary. Numbers are little-endian hexadecimal, as in
 the subject: `19bb` is `0xbb19`.
 
