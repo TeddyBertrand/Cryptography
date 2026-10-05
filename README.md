@@ -13,7 +13,7 @@
 | [Defense notes](docs/defense.md) | Know why each system is secure or not, and which attacks the bonuses stop |
 | [Constant-time audit](docs/constant-time-audit.md) | See how timing leaks were measured and fixed |
 
-**Techniques**, each with the theory, the code that implements it and its optimisations:
+**Techniques**, each explained in plain words, with a linked deep dive for the math, the code and the optimisations:
 [XOR](docs/guide/techniques/xor.md) ·
 [AES](docs/guide/techniques/aes.md) ·
 [Big integer arithmetic](docs/guide/techniques/bigint-arithmetic.md) ·

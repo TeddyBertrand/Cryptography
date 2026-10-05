@@ -42,7 +42,7 @@ m^13 = ((m² · m)²)² · m             read bits from the top:
 ```
 
 One squaring per bit, plus one multiplication per `1` bit: about `1.5 × bits` operations
-instead of `e`. The [bigint page](techniques/bigint-arithmetic.md#windowed-exponentiation)
+instead of `e`. The [bigint page](deep-dive/bigint-arithmetic.md#windowed-exponentiation)
 shows how windows reduce the multiplications further.
 
 ## 3. GCD and modular inverse
@@ -79,9 +79,9 @@ Two consequences used in the project:
   X25519 inverts field elements this way, and AES inverts bytes the same way in GF(2^8)
   (`a^254`).
 - **RSA works**: deciphering `(m^e)^d` gives back `m` because `e·d − 1` is a multiple of
-  `p − 1` and of `q − 1` (see [RSA](techniques/rsa.md#why-deciphering-gives-m-back)).
+  `p − 1` and of `q − 1` (see [RSA](deep-dive/rsa.md#why-deciphering-gives-m-back)).
 - **Primality tests**: if `a^(n−1) mod n ≠ 1`, `n` is certainly not prime. Miller-Rabin
-  refines this (see [primes](techniques/primes.md)).
+  refines this (see [primes](deep-dive/primes.md)).
 
 ## 5. Finite fields
 
@@ -127,7 +127,7 @@ gives `k·G` (or `G^k`). Cryptography uses groups where:
 An **elliptic curve** is the set of points `(x, y)` satisfying an equation such as
 `y² = x³ + 486662·x² + x` (Curve25519), with coordinates in GF(p). There is a geometric rule to
 "add" two points and get a third point on the curve; with it, the points form a group.
-X25519 is built on this group (see [X25519](techniques/x25519.md)).
+X25519 is built on this group (see [X25519](deep-dive/x25519.md)).
 
 **Diffie-Hellman** key exchange works in any such group: Alice picks secret `a`, publishes
 `A = a·G`; Bob picks `b`, publishes `B = b·G`. Both compute the same secret

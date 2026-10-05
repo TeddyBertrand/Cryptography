@@ -1,119 +1,45 @@
 # XOR cipher
 
-[← Guide index](../README.md) · Crate: [xor](../crates/xor.md) · Security: [defense.md § XOR](../../defense.md#xor)
+[← Guide index](../README.md) · Math and code: [deep dive](../deep-dive/xor.md) · Crate: [xor](../crates/xor.md) · Security: [defense.md § XOR](../../defense.md#xor)
 
-## The idea
+## In one sentence
 
-XOR ("exclusive or") combines two bits: the result is 1 when exactly one of them is 1.
+Flip some bits of the message, chosen by the key; flipping the same bits again gives the
+message back.
 
-| a | b | a ⊕ b |
-|---|---|---|
-| 0 | 0 | 0 |
-| 0 | 1 | 1 |
-| 1 | 0 | 1 |
-| 1 | 1 | 0 |
+## The picture
 
-Applied byte by byte between a message and a key, it hides the message. Its magic property
-is that it is its own inverse: `(m ⊕ k) ⊕ k = m`, because `k ⊕ k = 0`. The same operation
-ciphers and deciphers.
-
-## Theory
-
-### Basic XOR cipher
+Think of the key as a stencil laid over the message. Wherever the stencil has a hole (a `1`
+bit), the message bit is flipped. Lay the same stencil again and every flipped bit flips back.
+That is why **the same operation ciphers and deciphers**.
 
 ```
-message   'H'  = 0x48 = 0100 1000
-key            = 0x3c = 0011 1100
-cipher         = 0x74 = 0111 0100     (0x48 ^ 0x3c)
-decipher  0x74 ^ 0x3c = 0x48 = 'H'
+message  0100 1000   'H'
+key      0011 1100
+result   0111 0100   ← flipped where the key has a 1
+key      0011 1100
+back     0100 1000   'H' again
 ```
 
-If the key is truly random, as long as the message and used only once, this is the
-**one-time pad**, the only cipher proven unbreakable. In practice keys are reused, which breaks
-it (see [defense.md](../../defense.md#xor)).
+## How it works in my_pgp
 
-### The subject's byte order
-
-The subject writes keys and ciphertexts as little-endian hex numbers, but reads the message as
-plain bytes. Its example only comes out right if the message block is **reversed** before the
-XOR:
-
-```
-c = reverse(m) ⊕ k          ciphering one block
-m = reverse(c ⊕ k)          deciphering undoes it in the opposite order
-```
-
-Check: `reverse(c ⊕ k) = reverse(reverse(m) ⊕ k ⊕ k) = reverse(reverse(m)) = m`.
-
-Tiny example with a 4-byte key `00112233` (bytes `00 11 22 33`) and the message `A` (`41`):
+1. Cut the message into pieces as long as the key (pad the last piece with zeros).
+2. Flip each piece with the key (the subject also reverses the byte order of each piece).
+3. Print the result in hex.
 
 ```
 $ printf 'A' | ./my_pgp xor -c 00112233
 00112272
 ```
 
-Stream mode pads `41` to one key-sized block `41 00 00 00`, reverses it to `00 00 00 41`, and
-XORs with `00 11 22 33`: `00 11 22 72`. The padding zeros let the key show through, which is
-one of XOR's weaknesses.
+## Is it secure?
 
-### Block mode and stream mode
+- **In theory, perfectly**: with a truly random key as long as the message, used only once,
+  this is the *one-time pad*, the only cipher proven unbreakable.
+- **In practice, no**: here the key is short and reused for every piece. Patterns in the
+  message show through, and the zero padding even prints parts of the key in clear.
 
-- **Block mode (`-b`)**: the message must be exactly as long as the key. One block.
-- **Stream mode** (default): the message is cut into key-sized blocks; the last one is padded
-  with zero bytes; each block is ciphered as in block mode. A one-block message gives the same
-  output in both modes. Deciphering strips trailing zero bytes, so a message that *ends* in
-  `\0` bytes loses them (a known, documented limitation).
+## Going further
 
-## Code walkthrough
-
-File: [crates/xor/src/lib.rs](../../../crates/xor/src/lib.rs).
-
-The `Xor` struct only holds the key. `Xor::new` rejects an empty key.
-
-One block, in place:
-
-```rust
-fn cipher_in_place(&self, block: &mut [u8]) {
-    block.reverse();          // reverse(m)
-    self.xor_in_place(block); // ⊕ k
-}
-
-fn decipher_in_place(&self, block: &mut [u8]) {
-    self.xor_in_place(block); // c ⊕ k
-    block.reverse();          // reverse(...)
-}
-
-fn xor_in_place(&self, block: &mut [u8]) {
-    for (byte, key) in block.iter_mut().zip(self.key.iter()) {
-        *byte ^= key;
-    }
-}
-```
-
-- `cipher_block` / `decipher_block` (block mode) check that the block is exactly one key long,
-  then call the in-place functions.
-- The `Cipher` trait implementation (stream mode) pads to a multiple of the key length with
-  `resize(len.next_multiple_of(key_len), 0)`, then runs `cipher_in_place` on every
-  `chunks_mut(key_len)`. `decipher` checks the length is a multiple of the key, deciphers every
-  chunk and pops trailing zeros.
-
-The binary ([crates/my_pgp/src/main.rs](../../../crates/my_pgp/src/main.rs), `run_xor`) adds
-the I/O rules: in block mode it strips one trailing `\n` from the input (so `echo` works) and
-adds one back after deciphering; ciphered output is printed as one hex line.
-
-## Optimisations
-
-XOR needs none to be fast: one CPU instruction per byte, and the compiler vectorises the loop.
-The only care taken is to work **in place** on one buffer (`cipher_in_place`), so stream mode
-allocates the output once instead of one `Vec` per block.
-
-## Constant time
-
-XOR's running time depends only on the message length, never on the key's value. Nothing to do.
-
-## Tests
-
-- Unit tests in `crates/xor/src/lib.rs`: the subject example, round trips, error cases.
-- CLI tests: `crates/my_pgp/tests/cases/xor_*.txt` (data-driven, see [my_pgp](../crates/my_pgp.md#tests)).
-- Property tests: `crates/my_pgp/tests/roundtrip/symmetric.rs` round-trips random messages
-  and keys, comparing through `without_trailing_zeros` because of the stream-mode limitation.
+The [deep dive](../deep-dive/xor.md) covers the subject's byte order trick, block vs stream
+mode, the Rust code and the tests.
