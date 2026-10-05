@@ -4,6 +4,29 @@
 
 [docs/defense.md](docs/defense.md) explains how each cryptosystem works and why it is secure or not.
 
+## Documentation
+
+| Document | Read it to |
+|---|---|
+| [Project guide](docs/guide/README.md) | Understand the whole project from scratch: glossary, architecture, how a command runs |
+| [Math primer](docs/guide/math-primer.md) | Learn the few math ideas the rest relies on (modular arithmetic, inverses, finite fields) |
+| [Defense notes](docs/defense.md) | Know why each system is secure or not, and which attacks the bonuses stop |
+| [Constant-time audit](docs/constant-time-audit.md) | See how timing leaks were measured and fixed |
+
+**Techniques**, each with the theory, the code that implements it and its optimisations:
+[XOR](docs/guide/techniques/xor.md) ·
+[AES](docs/guide/techniques/aes.md) ·
+[Big integer arithmetic](docs/guide/techniques/bigint-arithmetic.md) ·
+[RSA](docs/guide/techniques/rsa.md) ·
+[Prime generation](docs/guide/techniques/primes.md) ·
+[SHA-256, SHA-512, HMAC, HKDF](docs/guide/techniques/sha-hmac-hkdf.md) ·
+[RSA-OAEP](docs/guide/techniques/oaep.md) ·
+[RSA signatures](docs/guide/techniques/signatures.md) ·
+[PGP hybrid](docs/guide/techniques/pgp-hybrid.md) ·
+[X25519 and Ed25519](docs/guide/techniques/x25519.md)
+
+**Crates**, each with its goal, API and users: see the links in the [Architecture](#architecture) table.
+
 ## Build
 
 You need a recent stable Rust toolchain (1.88 or later) and `make`. With Nix, `nix develop` opens a shell with the toolchain, `clippy`, `rustfmt` and `gh`.
@@ -25,9 +48,9 @@ make fclean   # clean + removes ./my_pgp
 
 | `CRYPTO_SYSTEM` | Kind | Key |
 |---|---|---|
-| `xor` | symmetric | any number of bytes |
-| `aes` | symmetric | 16, 24 or 32 bytes (AES-128, AES-192, AES-256) |
-| `rsa` | asymmetric | `e-n` to cipher, `d-n` to decipher |
+| [`xor`](docs/guide/crates/xor.md) | symmetric | any number of bytes |
+| [`aes`](docs/guide/crates/aes.md) | symmetric | 16, 24 or 32 bytes (AES-128, AES-192, AES-256) |
+| [`rsa`](docs/guide/crates/rsa.md) | asymmetric | `e-n` to cipher, `d-n` to decipher |
 | `X25519` | asymmetric | 32-byte Ed25519 public key to cipher, 32-byte Ed25519 seed to decipher |
 | `pgp-xor`, `pgp-aes` | hybrid | `SYMMETRIC_KEY:e-n` to cipher, `CIPHERED_KEY:d-n` to decipher |
 
@@ -198,24 +221,24 @@ The code is a Cargo workspace. Each crate holds one building block, and `crates/
 
 | Crate | Role | Depends on |
 |---|---|---|
-| `core` | `Cipher` trait, `Bytes` type, error type and the 84 exit code | — |
-| `encoding` | little-endian hexadecimal to bytes and back | — |
-| `argparse` | generic argument parser and help generator, with no knowledge of `my_pgp` | — |
-| `random` | CSPRNG seeded from `/dev/urandom` | — |
-| `bigint` | arbitrary-precision `BigUint`: arithmetic, division, Montgomery `modpow`, `gcd`, `lcm`, modular inverse | `encoding` |
-| `hash` | SHA-256, SHA-512 and HMAC-SHA256 | `encoding` |
-| `cli` | `my_pgp` argument spec and rules, turned into a `Command` | `argparse`, `core` |
-| `prime` | Miller-Rabin test and random prime generation | `bigint`, `random` |
-| `xor` | XOR block and stream cipher | `core`, `encoding` |
-| `aes` | AES-128/192/256 key expansion, block and stream cipher | `core`, `encoding` |
-| `padding` | RSA-OAEP with MGF1-SHA256 | `hash`, `random` |
-| `rsa` | key generation, textbook and OAEP cipher/decipher | `bigint`, `encoding`, `padding`, `prime`, `random` |
-| `x25519` | field arithmetic mod 2^255-19, Montgomery ladder, Ed25519 keys and their conversion, hybrid encryption | `aes`, `core`, `encoding`, `hash`, `random` |
-| `pgp` | `pgp-xor` and `pgp-aes` hybrid modes | `core`, `encoding`, `rsa`, `xor`, `aes` |
-| `sign` | RSASSA-PKCS1-v1_5 SHA-256 signatures | `bigint`, `rsa`, `hash` |
-| `my_pgp` | binary: parses arguments, reads standard input, dispatches, maps errors to exit 84 | `core`, `cli`, `encoding`, `xor`, `aes`, `rsa`, `pgp`, `x25519`, `sign`, `padding` |
+| [`core`](docs/guide/crates/core.md) | `Cipher` trait, `Bytes` type, error type and the 84 exit code | — |
+| [`encoding`](docs/guide/crates/encoding.md) | little-endian hexadecimal to bytes and back | — |
+| [`argparse`](docs/guide/crates/argparse.md) | generic argument parser and help generator, with no knowledge of `my_pgp` | — |
+| [`random`](docs/guide/crates/random.md) | CSPRNG seeded from `/dev/urandom` | — |
+| [`bigint`](docs/guide/crates/bigint.md) | arbitrary-precision `BigUint`: arithmetic, division, Montgomery `modpow`, `gcd`, `lcm`, modular inverse | `encoding` |
+| [`hash`](docs/guide/crates/hash.md) | SHA-256, SHA-512 and HMAC-SHA256 | `encoding` |
+| [`cli`](docs/guide/crates/cli.md) | `my_pgp` argument spec and rules, turned into a `Command` | `argparse`, `core` |
+| [`prime`](docs/guide/crates/prime.md) | Miller-Rabin test and random prime generation | `bigint`, `random` |
+| [`xor`](docs/guide/crates/xor.md) | XOR block and stream cipher | `core`, `encoding` |
+| [`aes`](docs/guide/crates/aes.md) | AES-128/192/256 key expansion, block and stream cipher | `core`, `encoding` |
+| [`padding`](docs/guide/crates/padding.md) | RSA-OAEP with MGF1-SHA256 | `hash`, `random` |
+| [`rsa`](docs/guide/crates/rsa.md) | key generation, textbook and OAEP cipher/decipher | `bigint`, `encoding`, `padding`, `prime`, `random` |
+| [`x25519`](docs/guide/crates/x25519.md) | field arithmetic mod 2^255-19, Montgomery ladder, Ed25519 keys and their conversion, hybrid encryption | `aes`, `core`, `encoding`, `hash`, `random` |
+| [`pgp`](docs/guide/crates/pgp.md) | `pgp-xor` and `pgp-aes` hybrid modes | `core`, `encoding`, `rsa`, `xor`, `aes` |
+| [`sign`](docs/guide/crates/sign.md) | RSASSA-PKCS1-v1_5 SHA-256 signatures | `bigint`, `rsa`, `hash` |
+| [`my_pgp`](docs/guide/crates/my_pgp.md) | binary: parses arguments, reads standard input, dispatches, maps errors to exit 84 | `core`, `cli`, `encoding`, `xor`, `aes`, `rsa`, `pgp`, `x25519`, `sign`, `padding` |
 
-`bench/` sits outside `crates/` and holds the `bench` and `timing` binaries (see [Benchmarks](#benchmarks)).
+`bench/` sits outside `crates/` and holds the `bench` and `timing` binaries (see [Benchmarks](#benchmarks) and [its guide page](docs/guide/crates/bench.md)).
 
 A new flag is one more `Arg` in `crates/cli/src/spec.rs`. A new cryptosystem is a new crate implementing `core::Cipher`, dispatched from `crates/my_pgp/src/main.rs`.
 
