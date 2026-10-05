@@ -86,7 +86,7 @@ Standalone:
 Docs:
 - `docs/defense.md` — per-cryptosystem "how it works / why it is (in)secure" notes for the defense. Update when a system's behavior changes.
 - `docs/constant-time-audit.md` — timing audit, `timing` harness method and results, accepted leaks.
-- `docs/guide/` — learning guide: `README.md` (entry, glossary, architecture), `math-primer.md`, `techniques/*.md` (theory → code → optimisations per technique), `crates/*.md` (goal, API, users per crate). Update the matching pages when a crate's API or algorithm changes; README links them.
+- `docs/guide/` — learning guide: `README.md` (entry, glossary, architecture), `math-primer.md`, `techniques/*.md` (plain-language overview per technique, no math), `deep-dive/*.md` (theory → code → optimisations, linked from each overview), `crates/*.md` (goal, API, users per crate). Update the matching pages when a crate's API or algorithm changes; README links them.
 
 ## Commands
 
