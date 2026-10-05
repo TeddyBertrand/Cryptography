@@ -31,7 +31,7 @@ assert_eq!(encoding::hex::encode(&block), "744ce22c385958348f0df26eceb62eef");
 ## Internal modules (`src/aes/`)
 
 `state` (block type), `field` (GF(2^8) and the one-byte S-box), `key_expansion`, `rounds`
-(the four round steps), `sbox` (bitsliced SubBytes). See the [technique page](../techniques/aes.md#code-walkthrough).
+(the four round steps), `sbox` (bitsliced SubBytes). See the [technique page](../deep-dive/aes.md#code-walkthrough).
 
 ## Used by
 

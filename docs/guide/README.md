@@ -1,8 +1,9 @@
 # my_pgp project guide
 
 This guide explains the whole `my_pgp` project to someone who has never seen it: what each
-cryptographic technique does, the math behind it, how the Rust code implements it, and which
-optimisations make it fast and safe. No cryptography background is assumed.
+cryptographic technique does, then, for those who want it, the math behind it, how the Rust
+code implements it, and which optimisations make it fast and safe. No cryptography background
+is assumed.
 
 It complements two other documents:
 
@@ -32,12 +33,18 @@ integer library, its own SHA-256, its own argument parser, and so on.
 
 ## Reading order
 
+Every technique has two pages:
+
+- **Overview** (`techniques/`): what it is and why it works, in plain words, with an analogy
+  and a command example. No math needed. Start here, and it's enough to explain the project.
+- **Deep dive** (`deep-dive/`): the math, the proofs, the Rust code, the optimisations and the
+  tests. Linked at the top and bottom of each overview. Read the
+  [math primer](math-primer.md) first.
+
 If you are new, read in this order:
 
-1. [Math primer](math-primer.md): the few math ideas every page relies on (modular
-   arithmetic, inverses, finite fields). Short, with examples.
-2. [Project architecture](#architecture) below: how the crates fit together.
-3. The techniques, from simplest to hardest:
+1. [Project architecture](#architecture) below: how the crates fit together.
+2. The technique overviews, from simplest to hardest (each links to its deep dive):
    1. [XOR](techniques/xor.md): the simplest cipher.
    2. [AES](techniques/aes.md): the standard symmetric block cipher.
    3. [Big integer arithmetic](techniques/bigint-arithmetic.md): how numbers with hundreds of
@@ -50,10 +57,12 @@ If you are new, read in this order:
    8. [RSA signatures](techniques/signatures.md) (bonus `-s`).
    9. [PGP hybrid encryption](techniques/pgp-hybrid.md): `pgp-xor` and `pgp-aes`.
    10. [X25519 and Ed25519](techniques/x25519.md): elliptic-curve encryption.
+3. The [math primer](math-primer.md) and the deep dives, when you want the details.
 4. The [crate reference](#crate-reference), when you need the details of one library.
 
-Each technique page follows the same plan: the idea in a paragraph, the theory step by step,
-the code walkthrough, the optimisations, the constant-time precautions, and the tests.
+Each overview follows the same plan: the idea in one sentence, the picture, how my_pgp uses
+it, and whether it is secure. Each deep dive: the idea, the theory step by step, the code
+walkthrough, the optimisations, the constant-time precautions, and the tests.
 
 ## Glossary
 
@@ -153,18 +162,18 @@ One page per crate: its goal, its public API, who uses it, and design choices.
 
 | Where | Optimisation | Gain | Page |
 |---|---|---|---|
-| bigint | Montgomery multiplication: no division in modular multiply | the core of fast RSA | [bigint](techniques/bigint-arithmetic.md#montgomery-multiplication) |
-| bigint | Dedicated squaring: each cross product computed once | ~half the multiplications of a square | [bigint](techniques/bigint-arithmetic.md#dedicated-squaring) |
-| bigint | Windowed exponentiation (fixed for secrets, sliding for public) | ≥ 2.2× (constant-time) and ≥ 2.5× (public exponent) over plain square-and-multiply, 2048 bits | [bigint](techniques/bigint-arithmetic.md#windowed-exponentiation) |
-| bigint | Knuth Algorithm D with normalisation | long division one limb at a time | [bigint](techniques/bigint-arithmetic.md#division-knuths-algorithm-d) |
-| rsa | λ(n) instead of φ(n) | smaller `d`, fewer squarings | [rsa](techniques/rsa.md#why-λn-and-not-φn) |
-| rsa | Fermat prime `e = 65537` | 17 multiplications to cipher | [rsa](techniques/rsa.md#choosing-e) |
-| prime | Trial division before Miller-Rabin | rejects ~85% of odd candidates cheaply | [primes](techniques/primes.md#step-1-trial-division) |
-| aes | Bitsliced Boyar-Peralta S-box | 16 bytes in one 128-gate circuit, no table | [aes](techniques/aes.md#bitsliced-s-box) |
-| aes | MixColumns with one `xtime` per byte | 4 doublings per column instead of 8+ | [aes](techniques/aes.md#mixcolumns-with-one-xtime-per-byte) |
-| aes | InvMixColumns as a cheap pre-step + forward MixColumns | no `·9 ·11 ·13 ·14` multiplications | [aes](techniques/aes.md#invmixcolumns-reusing-mixcolumns) |
-| aes | Key expanded once per key | no per-block key schedule | [aes](techniques/aes.md#key-expansion) |
-| x25519 | 5×51-bit limbs and the `2^255 ≡ 19` fold | reduction = multiply by 19, no division | [x25519](techniques/x25519.md#the-field-gf2255--19) |
-| x25519 | Montgomery ladder in projective `(X : Z)` | one inversion total instead of one per step | [x25519](techniques/x25519.md#the-curve-and-the-montgomery-ladder) |
-| x25519 | Extended Edwards coordinates, unified addition | 9 field multiplications per addition, no special cases | [x25519](techniques/x25519.md#ed25519-keys) |
-| sha | Streaming state with a 64-byte buffer | hashes any length in constant memory | [sha](techniques/sha-hmac-hkdf.md#code-walkthrough) |
+| bigint | Montgomery multiplication: no division in modular multiply | the core of fast RSA | [bigint](deep-dive/bigint-arithmetic.md#montgomery-multiplication) |
+| bigint | Dedicated squaring: each cross product computed once | ~half the multiplications of a square | [bigint](deep-dive/bigint-arithmetic.md#dedicated-squaring) |
+| bigint | Windowed exponentiation (fixed for secrets, sliding for public) | ≥ 2.2× (constant-time) and ≥ 2.5× (public exponent) over plain square-and-multiply, 2048 bits | [bigint](deep-dive/bigint-arithmetic.md#windowed-exponentiation) |
+| bigint | Knuth Algorithm D with normalisation | long division one limb at a time | [bigint](deep-dive/bigint-arithmetic.md#division-knuths-algorithm-d) |
+| rsa | λ(n) instead of φ(n) | smaller `d`, fewer squarings | [rsa](deep-dive/rsa.md#why-λn-and-not-φn) |
+| rsa | Fermat prime `e = 65537` | 17 multiplications to cipher | [rsa](deep-dive/rsa.md#choosing-e) |
+| prime | Trial division before Miller-Rabin | rejects ~85% of odd candidates cheaply | [primes](deep-dive/primes.md#step-1-trial-division) |
+| aes | Bitsliced Boyar-Peralta S-box | 16 bytes in one 128-gate circuit, no table | [aes](deep-dive/aes.md#bitsliced-s-box) |
+| aes | MixColumns with one `xtime` per byte | 4 doublings per column instead of 8+ | [aes](deep-dive/aes.md#mixcolumns-with-one-xtime-per-byte) |
+| aes | InvMixColumns as a cheap pre-step + forward MixColumns | no `·9 ·11 ·13 ·14` multiplications | [aes](deep-dive/aes.md#invmixcolumns-reusing-mixcolumns) |
+| aes | Key expanded once per key | no per-block key schedule | [aes](deep-dive/aes.md#key-expansion) |
+| x25519 | 5×51-bit limbs and the `2^255 ≡ 19` fold | reduction = multiply by 19, no division | [x25519](deep-dive/x25519.md#the-field-gf2255--19) |
+| x25519 | Montgomery ladder in projective `(X : Z)` | one inversion total instead of one per step | [x25519](deep-dive/x25519.md#the-curve-and-the-montgomery-ladder) |
+| x25519 | Extended Edwards coordinates, unified addition | 9 field multiplications per addition, no special cases | [x25519](deep-dive/x25519.md#ed25519-keys) |
+| sha | Streaming state with a 64-byte buffer | hashes any length in constant memory | [sha](deep-dive/sha-hmac-hkdf.md#code-walkthrough) |
