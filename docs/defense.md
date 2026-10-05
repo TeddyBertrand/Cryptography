@@ -264,8 +264,8 @@ The hybrid is only as strong as its weakest part, and here each part keeps its w
   the shell history and in `ps`, and nothing stops reusing it. With `pgp-xor`, reuse is the
   two-time pad from [XOR](#xor).
 - **Textbook RSA shows the reuse.** The first line is deterministic, so two messages under
-  the same key start with the same line (`$PUBLIC` is the subject's public key, as in the
-  README):
+  the same key start with the same line (`$PUBLIC` is the subject's 512-bit public key, from
+  `rsa -g` on its appendix primes):
 
   ```
   $ echo one | ./my_pgp pgp-aes -c "57696e74657220697320636f6d696e67:$PUBLIC" | head -1

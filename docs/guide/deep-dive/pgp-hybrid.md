@@ -34,7 +34,7 @@ stdin:         line 2 from above
 output:        the message
 ```
 
-Example from the README, with `$PUBLIC` / `$PRIVATE` the subject's 512-bit key pair:
+Example from the subject, with `$PUBLIC` / `$PRIVATE` its 512-bit key pair (`rsa -g` on the appendix primes):
 
 ```
 $ echo 'All men must die' | ./my_pgp pgp-aes -c -b "57696e74657220697320636f6d696e67:$PUBLIC"
