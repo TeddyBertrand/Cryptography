@@ -8,6 +8,10 @@ version:  0.1.0
 **Difficulty:** Easy | **Points:** 1750 (decays with solves) | **Flag:**
 <details><summary>reveal</summary><code>EPI{DumP1nG_H45h3s_L1k3_4_B0ss}</code></details>
 
+**Primary Technique(s):** OS Credential Dumping — SAM/LSA Secrets
+(T1003.002, T1003.004); Unsecured Credentials in Registry — Windows
+AutoLogon (T1552.002)
+
 > Description: *"An employee not listening to IT is bad, but what would happen
 > if it were an administrator not listening?"*
 

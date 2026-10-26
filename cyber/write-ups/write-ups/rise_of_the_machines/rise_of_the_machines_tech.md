@@ -6,6 +6,10 @@ version:  0.1.0
 
 **Category:** DACL | **Difficulty:** Medium | **Flag:** <details><summary>reveal</summary><code>EPI{0wn3rsh1P_r3M4n493m3N7}</code></details>
 
+**Primary Technique(s):** Pass-the-Hash (T1550.002); DACL abuse —
+`WriteOwner` self-ownership takeover + `WriteDacl` (T1098); inherited
+`WriteSPN` → Kerberoasting (T1558.003)
+
 > Description: *"Turns out, machines can do some serious damage as well!
 > Find out those special privileges with bloodhound!"*
 

@@ -6,6 +6,9 @@ version:  0.1.0
 
 **Category:** Misconfig | **Difficulty:** Easy | **Flag:** <details><summary>reveal</summary><code>EPI{cp4zzw0rd_15_N07_5ECURe_d4MN_Y0U_m1CR050f7}</code></details>
 
+**Primary Technique(s):** Unsecured Credentials — Group Policy
+Preferences `cpassword` (T1552.006)
+
 > Description: *"AES is secure, but a well-known static key is a BIG
 > problem."*
 

@@ -6,6 +6,9 @@ version:  0.1.0
 
 **Category:** Misconfig | **Difficulty:** Medium | **Flag:** <details><summary>reveal</summary><code>EPI{P455_7h3_H45h_L1k3_4_Pro}</code></details>
 
+**Primary Technique(s):** OS Credential Dumping — SAM (T1003.002);
+Pass-the-Hash (T1550.002); Valid Accounts — Local Accounts (T1078.001)
+
 > Description: *"Congrats on finding an administrator! You must have found
 > the hash for all local users, right? What would happen if a user reuse
 > its password? But that would be a problem only if you can crack the

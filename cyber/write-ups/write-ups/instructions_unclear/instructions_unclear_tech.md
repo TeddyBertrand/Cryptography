@@ -6,6 +6,9 @@ version:  0.1.0
 
 **Category:** Misconfig | **Difficulty:** Easy | **Flag:** <details><summary>reveal</summary><code>EPI{D3f4u1t_P4$$w0rd_1s_53Cur3_R1gH7?}</code></details>
 
+**Primary Technique(s):** Unsecured Credentials in Files (T1552.001);
+Password Spraying (T1110.003)
+
 Working log: `challenges/instructions-unclear.md`. Related write-up:
 [Catastrophic Failure](../catastrophic_failure/catastrophic_failure_tech.md)
 (the higher-privilege, admin-focused continuation of this same leaked

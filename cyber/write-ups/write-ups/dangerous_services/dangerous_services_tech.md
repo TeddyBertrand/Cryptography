@@ -6,6 +6,8 @@ version:  0.1.0
 
 **Category:** Kerberos | **Difficulty:** Easy | **Flag:** <details><summary>reveal</summary><code>EPI{SPN_juicE_f0r_d4y5}</code></details>
 
+**Primary Technique(s):** Kerberoasting (T1558.003)
+
 Working log: `challenges/dangerous-services.md`. Background reading:
 `services/kerberos.md`, `tools/netexec.md`. Related finding: AS-REP roasting of
 `j.vabre` (see `write-ups/kerberos/no-preauth-needed.md`), discovered via the

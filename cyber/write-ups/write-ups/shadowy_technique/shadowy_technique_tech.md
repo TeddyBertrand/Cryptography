@@ -6,6 +6,9 @@ version:  0.1.0
 
 **Category:** DACL | **Difficulty:** Hard | **Flag:** <details><summary>reveal</summary><code>EPI{Add3d_K3yS_w17h0u7_P3rM5_M4giC}</code></details>
 
+**Primary Technique(s):** DACL abuse — `AddKeyCredentialLink` / Shadow
+Credentials (T1649); Pass-the-Hash (T1550.002)
+
 > Description: *"This is a privilege that is actually used by admin to
 > 'log as' you. What could go wrong with that?"*
 

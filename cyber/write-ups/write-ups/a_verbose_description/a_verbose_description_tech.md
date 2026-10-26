@@ -6,6 +6,9 @@ version:  0.1.0
 
 **Category:** Misconfig | **Difficulty:** Easy | **Flag:** <details><summary>reveal</summary><code>EPI{P4$$w0rd_h1dd3n_1n_7h3_D35c}</code></details>
 
+**Primary Technique(s):** Unsecured Credentials in Files/Attributes —
+AD `description`-field password leak (T1552.001)
+
 > Description: *"Sometimes, users or IT do dumb stuff, like putting their
 > password in postit note, or elsewhere..."*
 

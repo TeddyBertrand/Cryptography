@@ -6,6 +6,8 @@ version:  0.1.0
 
 **Category:** DACL | **Difficulty:** Easy | **Flag:** <details><summary>reveal</summary><code>EPI{D4CL_s4y5_1_0WN_y0uR_Acc0un7_P4L}</code></details>
 
+**Primary Technique(s):** DACL abuse — `ForceChangePassword` (T1098)
+
 > Description: *"Why bother with cracking a password when you can just
 > change it?"*
 

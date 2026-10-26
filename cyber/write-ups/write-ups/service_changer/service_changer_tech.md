@@ -6,6 +6,9 @@ version:  0.1.0
 
 **Category:** DACL | **Difficulty:** Medium | **Flag:** <details><summary>reveal</summary><code>EPI{p1ck1n9_0u7_SPn5_w1th_c4r3}</code></details>
 
+**Primary Technique(s):** DACL abuse — `WriteSPN` (T1098); Targeted
+Kerberoasting (T1558.003)
+
 Working log: `challenges/service-changer.md`. Prerequisite finding:
 [Dangerous Services](../dangerous_services/dangerous_services_tech.md)
 (`g.clooney`'s SPN-based Kerberoasting), whose BloodHound data surfaced the

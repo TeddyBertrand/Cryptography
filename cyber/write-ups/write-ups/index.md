@@ -19,7 +19,10 @@ the actual PDF deliverables.
 
 See also: [Remediation Roadmap](remediation-roadmap.md) — a consolidated,
 prioritized view of fixes across all solved challenges, for root causes
-that repeat across multiple independently-scored findings.
+that repeat across multiple independently-scored findings. Also:
+[Technique Glossary](technique-glossary.md) — every named
+attack/exploit technique used, with MITRE ATT&CK IDs and AD-specific
+primitives, cross-referenced by challenge and by tactic.
 
 **Note:** the three theme folders above are not yet up to date with the
 full set of solved challenges — see `write-ups/<slug>/` (e.g.

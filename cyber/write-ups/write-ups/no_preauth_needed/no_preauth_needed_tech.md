@@ -6,6 +6,8 @@ version:  0.1.0
 
 **Category:** Kerberos | **Flag:** <details><summary>reveal</summary><code>EPI{n0_PR3Auth_Kerber0s_r0aSt}</code></details>
 
+**Primary Technique(s):** AS-REP Roasting (T1558.004)
+
 Working log: `challenges/no-preauth-needed.md`. Background reading:
 `services/kerberos.md`. Related write-up:
 [Dangerous Services](../dangerous_services/dangerous_services_tech.md)
